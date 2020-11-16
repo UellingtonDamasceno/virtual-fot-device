@@ -69,11 +69,7 @@ public final class TATUWrapper {
         response.put("HEADER", header);
         response.put("BODY", body);
         
-        return new StringBuilder()
-                .append("GET")
-                .append(" VALUE RESPONSE ")
-                .append(response.toString())
-                .toString();
+        return response.toString();
     }
 
     public static String buildFlowMessageResponse(String deviceName, String sensorName, int publish, int collect, Object[] values) {
@@ -94,12 +90,8 @@ public final class TATUWrapper {
         response.put("CODE", "POST");
         response.put("HEADER", header);
         response.put("BODY", body);
-        
-        return new StringBuilder()
-                .append("FLOW")
-                .append(" VALUE RESPONSE ")
-                .append(response.toString())
-                .toString();
+
+        return response.toString();
     }
 
     public static boolean isTATUResponse(String message) {
