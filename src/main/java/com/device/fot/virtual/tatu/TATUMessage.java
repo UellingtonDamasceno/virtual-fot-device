@@ -22,10 +22,10 @@ public class TATUMessage {
 
     public TATUMessage(String message) {
         this.message = message;
-        this.method = TATUMethods.valueOf(message.substring(0, message.indexOf(' ')));
+        this.method = TATUMethods.valueOf(TATUWrapper.getMethod(message));
         this.response = TATUWrapper.isTATUResponse(message);
         this.targetName = this.getTarget(message);
-        this.content = this.findMessageContent();
+        this.content = this.findMessageContent(message);
     }
 
     public TATUMethods getMethod() {
@@ -44,21 +44,20 @@ public class TATUMessage {
         return this.response;
     }
 
-    private String getTarget(String msg) {
+    private String getTarget(String message) {
         return (!this.isResponse())
-                ? this.message.split(" ")[2]
-                : TATUWrapper.getSensorIdByTATUAnswer(msg.substring(msg.indexOf("{")));
+                ? TATUWrapper.getSensorIdByTATURequest(message)
+                : TATUWrapper.getSensorIdByTATUAnswer(message);
     }
 
-    private Optional<String> findMessageContent() {
-        String substring;
+    private Optional<String> findMessageContent(String message) {
+        String newMsg = message.replace("\\", "");
         if (this.isResponse()) {
-            substring = message.substring(message.indexOf("{"));
-            if (TATUWrapper.isValidTATUAnswer(substring)) {
-                return Optional.ofNullable(substring);
+            if (TATUWrapper.isValidTATUAnswer(newMsg)) {
+                return Optional.ofNullable(newMsg);
             }
         } else if (method.equals(TATUMethods.FLOW) || method.equals(TATUMethods.SET)) {
-            return Optional.ofNullable(message.substring(message.indexOf("{")));
+            return Optional.ofNullable(newMsg.substring(newMsg.indexOf("{")));
         }
         return Optional.ofNullable("");
     }

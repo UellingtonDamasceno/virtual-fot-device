@@ -15,7 +15,7 @@ public class BrokerSettings {
     private final String serverId;
     private final String username;
     private final String password;
-
+    
     protected BrokerSettings(String url, String port, String serverId, String username, String password) {
         this.url = url;
         this.port = port;

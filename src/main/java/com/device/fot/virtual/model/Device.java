@@ -23,13 +23,11 @@ public class Device implements MqttCallback {
     private BrokerSettings brokerSettings;
     private Map<String, Sensor> sensors;
 
-//    private final ScheduledExecutorService executor;
     private MqttClient publisher, subscriber;
 
     public Device(String deviceName, Map<String, Sensor> sensors) {
         this.deviceName = deviceName;
         this.sensors = sensors;
-//        this.executor = new ScheduledThreadPoolExecutor(2);
     }
 
     public void connect(BrokerSettings brokerSettings) throws MqttException {
@@ -47,6 +45,7 @@ public class Device implements MqttCallback {
         this.subscriber.subscribe(TATUWrapper.buildTATUTopic(this.deviceName, "+"), 1);
 
         this.brokerSettings = brokerSettings;
+        this.sensors.values().forEach(sensor -> sensor.setPublisher(publisher));
     }
 
     public void updateBrokerSettings(BrokerSettings newBrokerSettings) throws MqttException {
@@ -63,12 +62,6 @@ public class Device implements MqttCallback {
         try {
             this.publisher.disconnect();
             this.subscriber.disconnect();
-//            try {
-//                this.executor.shutdown();
-//                this.executor.awaitTermination(5L, TimeUnit.SECONDS);
-//            } catch (InterruptedException ex) {
-//                this.executor.shutdownNow();
-//            }
         } catch (MqttException ex) {
             Logger.getLogger(Device.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -92,33 +85,38 @@ public class Device implements MqttCallback {
         System.out.println("============================");
         System.out.println("MQTT_MESSAGE: " + new String(mqttMessage.getPayload()));
         System.out.println("TOPIC: " + topic);
-        System.out.println("MY_MESSAGE: " + tatuMessage);
-
-        Sensor sensor = this.getSensorByName(tatuMessage.getTarget());
+//        System.out.println("MY_MESSAGE: " + tatuMessage);
 
         switch (tatuMessage.getMethod()) {
             case FLOW:
-                JSONObject flow = new JSONObject(tatuMessage.getMessageContent());
-                sensor.setFlowCollect(flow.getInt("collect"));
-                sensor.setFlowPublish(flow.getInt("publish"));
+                Sensor flowSensor = this.getSensorByName(tatuMessage.getTarget());
 
+                JSONObject flow = new JSONObject(tatuMessage.getMessageContent());
+                flowSensor.setFlowCollect(flow.getInt("collect"));
+                flowSensor.setFlowPublish(flow.getInt("publish"));
+
+                flowSensor.startFlow();
                 break;
             case GET:
-                jsonResponse = TATUWrapper.buildGetMessageResponse(this.deviceName,
-                        sensor.getSensorName(),
-                        sensor.getCurrentValue());
+                Sensor getSensor = this.getSensorByName(tatuMessage.getTarget());
+
+                jsonResponse = TATUWrapper.buildGetMessageResponse(deviceName,
+                        getSensor.getSensorName(),
+                        getSensor.getCurrentValue());
+
                 mqttResponse.setPayload(jsonResponse.getBytes());
-                String publishTopic = TATUWrapper.buildTATUResponseTopic(deviceName, sensor.getSensorName());
+                String publishTopic = TATUWrapper.buildTATUResponseTopic(deviceName, getSensor.getSensorName());
+
                 this.publisher.publish(publishTopic, mqttResponse);
                 System.out.println("PUBLISH IN TOPIC: " + publishTopic);
                 break;
             case SET:
                 String target = tatuMessage.getTarget();
-                if (target.equals("brokerMqtt")) {
+                if (target.equalsIgnoreCase("brokerMqtt")) {
                     String newMessage = tatuMessage.getMessageContent().replace("\\", "");
-                    
+
                     JSONObject newBrokerSettingsJson = new JSONObject(newMessage);
-                 
+
                     BrokerSettings newBrokerSettings = BrokerSettingsBuilder.builder()
                             .setServerId(newBrokerSettingsJson.getString("id"))
                             .setUrl(newBrokerSettingsJson.getString("url"))
@@ -126,7 +124,7 @@ public class Device implements MqttCallback {
                             .setUsername(newBrokerSettingsJson.getString("user"))
                             .setPassword(newBrokerSettingsJson.getString("password"))
                             .build();
-                    
+
                     this.updateBrokerSettings(newBrokerSettings);
                 } else {
                     System.out.println("Target false");
@@ -135,6 +133,9 @@ public class Device implements MqttCallback {
             case EVT:
                 break;
             case POST:
+                break;
+            case INVALID:
+                System.out.println("Invalid message!");
                 break;
             default:
                 throw new AssertionError(tatuMessage.getMethod().name());

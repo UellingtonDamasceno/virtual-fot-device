@@ -12,6 +12,8 @@ import org.json.JSONObject;
 import com.device.fot.virtual.model.Device;
 import com.device.fot.virtual.model.Sensor;
 import com.device.fot.virtual.model.Data;
+import com.device.fot.virtual.tatu.TATUMethods;
+import org.json.JSONException;
 
 public final class TATUWrapper {
 
@@ -26,7 +28,7 @@ public final class TATUWrapper {
         return buildTATUFlow(sensorId, collectSeconds, publishSeconds, "VALUE ");
     }
 
-    private static String buildTATUFlow(String sensorId, int collectSeconds, int publishSeconds, String command){
+    private static String buildTATUFlow(String sensorId, int collectSeconds, int publishSeconds, String command) {
         return new StringBuilder()
                 .append("FLOW ")
                 .append(command)
@@ -37,7 +39,7 @@ public final class TATUWrapper {
                 .append(publishSeconds)
                 .append("}").toString();
     }
-    
+
     public static String buildTATUTopic(String deviceName, String sensorName) {
         return new StringBuilder()
                 .append(topicBase)
@@ -61,14 +63,14 @@ public final class TATUWrapper {
         JSONObject response = new JSONObject();
         JSONObject header = new JSONObject();
         JSONObject body = new JSONObject();
-        
+
         header.put("NAME", deviceName);
         body.put(sensorName, value);
         response.put("METHOD", "GET");
         response.put("CODE", "POST");
         response.put("HEADER", header);
         response.put("BODY", body);
-        
+
         return response.toString();
     }
 
@@ -95,10 +97,8 @@ public final class TATUWrapper {
     }
 
     public static boolean isTATUResponse(String message) {
-        String[] splitedMessage = message.split(" ");
-        return splitedMessage.length >= 2
-                && splitedMessage[1].equals("VALUE")
-                && splitedMessage[2].equals("RESPONSE");
+        return !isValidTATUMessage(message)
+                && isValidTATUAnswer(message);
     }
 
     public static boolean isValidTATUMessage(String message) {
@@ -111,11 +111,23 @@ public final class TATUWrapper {
             JSONObject json = new JSONObject(answer);
             return ((json.get("CODE").toString().contentEquals("POST"))
                     && json.getJSONObject("BODY") != null);
-        } catch (org.json.JSONException e) {
+        } catch (JSONException e) {
             return false;
         }
     }
 
+    public static String getMethod(String message){
+        if(isValidTATUMessage(message)){
+            if(isTATUResponse(message) && isValidTATUAnswer(message)){
+                JSONObject response = new JSONObject(message);
+                return response.getJSONObject("HEADER").getString("METHOD");
+            }else{
+                return message.split(" ")[0];
+            }
+        }
+        return TATUMethods.INVALID.name();
+    }
+    
     public static String getDeviceIdByTATUAnswer(String answer) {
         JSONObject json = new JSONObject(answer);
         return json.getJSONObject("HEADER").getString("NAME");
@@ -129,6 +141,10 @@ public final class TATUWrapper {
             sensorId = keys.next().toString();
         }
         return sensorId;
+    }
+    
+    public static String getSensorIdByTATURequest(String request){
+        return request.split(" ")[2];
     }
 
     public static List<Data> parseTATUAnswerToListSensorData(String answer, Device device, Sensor sensor, Date baseDate) {
