@@ -1,152 +1,108 @@
 package com.device.fot.virtual.model;
 
-import com.device.fot.virtual.tatu.TATUMessage;
 import com.device.fot.virtual.util.TATUWrapper;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.json.JSONObject;
 
 /**
  *
  * @author Uellington Damasceno
  */
-public class Device implements MqttCallback {
+public class Device {
 
-    private final String deviceName;
+    private String name;
     private BrokerSettings brokerSettings;
     private Map<String, Sensor> sensors;
 
     private MqttClient publisher, subscriber;
+    private boolean updating;
+    private MqttCallback midlleware;
 
-    public Device(String deviceName, Map<String, Sensor> sensors) {
-        this.deviceName = deviceName;
+    public Device(String name, Map<String, Sensor> sensors) {
+        this.name = name;
         this.sensors = sensors;
+        this.updating = false;
+    }
+
+    public String getName() {
+        return this.name;
+    }
+
+    public Sensor getSensorByName(String name) {
+        return this.sensors.getOrDefault(name, new NullSensor(this.name));
+    }
+
+    public void startFlow() {
+        this.sensors.values()
+                .stream()
+                .filter(Sensor::isFlow)
+                .forEach(Sensor::startFlow);
+    }
+
+    public void pauseFlow() {
+        this.sensors.values()
+                .stream()
+                .filter(Sensor::isFlow)
+                .forEach(Sensor::pauseFlow);
+    }
+
+    public void stopFlow() {
+        this.sensors.values()
+                .stream()
+                .filter(Sensor::isRunnging)
+                .forEach(Sensor::stopFlow);
+    }
+
+    public boolean isUpdating() {
+        return this.updating;
+    }
+
+    public void setIsUpdating(boolean updating) {
+        this.updating = updating;
     }
 
     public void connect(BrokerSettings brokerSettings) throws MqttException {
+
         this.subscriber = brokerSettings.getSubscriber();
         this.publisher = brokerSettings.getPublisher();
 
         MqttConnectOptions options = brokerSettings.getConnectionOptions();
+        this.midlleware = (midlleware == null) ? midlleware = new Middleware(this) : midlleware;
 
-        this.subscriber.setCallback(this);
-        this.publisher.setCallback(this);
+        this.subscriber.setCallback(midlleware);
+        this.publisher.setCallback(midlleware);
 
-        this.subscriber.connect(options);
-        this.publisher.connect(options);
+        if (!this.subscriber.isConnected()) {
+            this.subscriber.connect(options);
+        }
+        if (!this.publisher.isConnected()) {
+            this.publisher.connect(options);
+        }
 
-        this.subscriber.subscribe(TATUWrapper.buildTATUTopic(this.deviceName, "+"), 1);
+        this.subscriber.subscribe(TATUWrapper.buildTATUTopic(this.name, "+"), 1);
+        this.sensors.values().forEach(sensor -> sensor.setPublisher(publisher));
 
         this.brokerSettings = brokerSettings;
-        this.sensors.values().forEach(sensor -> sensor.setPublisher(publisher));
     }
 
     public void updateBrokerSettings(BrokerSettings newBrokerSettings) throws MqttException {
         BrokerSettings oldBrokerSettings = this.brokerSettings;
+        this.pauseFlow();
+        this.brokerSettings.disconnectAllClients();
         try {
-            this.disconnect();
             this.connect(newBrokerSettings);
         } catch (MqttException ex) {
             this.connect(oldBrokerSettings);
         }
+        this.startFlow();
+        this.updating = false;
     }
 
-    public void disconnect() {
-        try {
-            this.publisher.disconnect();
-            this.subscriber.disconnect();
-        } catch (MqttException ex) {
-            Logger.getLogger(Device.class.getName()).log(Level.SEVERE, null, ex);
-        }
+    public void publish(String topic, MqttMessage message) throws MqttException {
+        this.publisher.publish(topic, message);
     }
-
-    public Sensor getSensorByName(String name) {
-        return this.sensors.getOrDefault(name, new NullSensor(this.deviceName));
-    }
-
-    @Override
-    public void connectionLost(Throwable thrwbl) {
-        System.out.println("Alguém desconectou!");
-    }
-
-    @Override
-    public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        TATUMessage tatuMessage = new TATUMessage(mqttMessage.getPayload());
-        MqttMessage mqttResponse = new MqttMessage();
-        String jsonResponse;
-
-        System.out.println("============================");
-        System.out.println("MQTT_MESSAGE: " + new String(mqttMessage.getPayload()));
-        System.out.println("TOPIC: " + topic);
-//        System.out.println("MY_MESSAGE: " + tatuMessage);
-
-        switch (tatuMessage.getMethod()) {
-            case FLOW:
-                Sensor flowSensor = this.getSensorByName(tatuMessage.getTarget());
-
-                JSONObject flow = new JSONObject(tatuMessage.getMessageContent());
-                flowSensor.setFlowCollect(flow.getInt("collect"));
-                flowSensor.setFlowPublish(flow.getInt("publish"));
-
-                flowSensor.startFlow();
-                break;
-            case GET:
-                Sensor getSensor = this.getSensorByName(tatuMessage.getTarget());
-
-                jsonResponse = TATUWrapper.buildGetMessageResponse(deviceName,
-                        getSensor.getSensorName(),
-                        getSensor.getCurrentValue());
-
-                mqttResponse.setPayload(jsonResponse.getBytes());
-                String publishTopic = TATUWrapper.buildTATUResponseTopic(deviceName, getSensor.getSensorName());
-
-                this.publisher.publish(publishTopic, mqttResponse);
-                System.out.println("PUBLISH IN TOPIC: " + publishTopic);
-                break;
-            case SET:
-                String target = tatuMessage.getTarget();
-                if (target.equalsIgnoreCase("brokerMqtt")) {
-                    String newMessage = tatuMessage.getMessageContent().replace("\\", "");
-
-                    JSONObject newBrokerSettingsJson = new JSONObject(newMessage);
-
-                    BrokerSettings newBrokerSettings = BrokerSettingsBuilder.builder()
-                            .setServerId(newBrokerSettingsJson.getString("id"))
-                            .setUrl(newBrokerSettingsJson.getString("url"))
-                            .setPort(newBrokerSettingsJson.getString("port"))
-                            .setUsername(newBrokerSettingsJson.getString("user"))
-                            .setPassword(newBrokerSettingsJson.getString("password"))
-                            .build();
-
-                    this.updateBrokerSettings(newBrokerSettings);
-                } else {
-                    System.out.println("Target false");
-                }
-                break;
-            case EVT:
-                break;
-            case POST:
-                break;
-            case INVALID:
-                System.out.println("Invalid message!");
-                break;
-            default:
-                throw new AssertionError(tatuMessage.getMethod().name());
-        }
-        System.out.println("============================");
-
-    }
-
-    @Override
-    public void deliveryComplete(IMqttDeliveryToken imdt) {
-
-    }
-
 }

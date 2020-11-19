@@ -2,9 +2,6 @@ package com.device.fot.virtual.model;
 
 import com.device.fot.virtual.util.TATUWrapper;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -29,8 +26,6 @@ public class Sensor implements Runnable {
         this.deviceName = deviceName;
         this.flow = false;
         this.running = false;
-        this.thread = new Thread(this);
-        this.thread.setName("FLOW/" + deviceName + "/" + sensorName);
     }
 
     public String getSensorName() {
@@ -54,26 +49,58 @@ public class Sensor implements Runnable {
     }
 
     public void setFlowPublish(int flowPublish) {
-        this.flowPublish = flowPublish;
+        if (flowPublish >= 1) {
+            this.flowPublish = flowPublish;
+        } else {
+            this.stopFlow();
+        }
     }
 
     public void setFlowCollect(int flowCollect) {
-        this.flowCollect = flowCollect;
+        if (flowCollect >= 1) {
+            this.flowCollect = flowCollect;
+        } else {
+            this.stopFlow();
+        }
     }
 
     public void startFlow() {
-        if (!this.thread.isAlive()) {
-            this.thread.start();
+        this.startFlow(flowCollect, flowPublish);
+    }
+
+    public void startFlow(int newFlowCollect, int newFlowPublish) {
+        if (newFlowCollect >= 1 && newFlowPublish >= 1) {
+            this.flowCollect = newFlowCollect;
+            this.flowPublish = newFlowPublish;
+            if (thread == null || !thread.isAlive()) {
+                this.thread = new Thread(this);
+                this.thread.setName("FLOW/" + deviceName + "/" + sensorName);
+                this.thread.start();
+            }
+        } else {
+            if (this.running && this.flow) {
+                this.stopFlow();
+            }
         }
     }
 
     public void pauseFlow() {
-        this.running = false;
+        if (this.thread.isAlive() && this.running) {
+            this.running = false;
+            this.thread.interrupt();
+        }
     }
 
     public void stopFlow() {
-        this.running = false;
-        this.flow = false;
+        if (this.thread != null && this.running) {
+            this.running = false;
+            this.flow = false;
+            this.thread.interrupt();
+        }
+    }
+
+    public boolean isRunnging() {
+        return this.running;
     }
 
     public Double getCurrentValue() {
@@ -94,16 +121,15 @@ public class Sensor implements Runnable {
         String topic = TATUWrapper.buildTATUResponseTopic(deviceName, sensorName);
         this.flow = true;
         this.running = true;
-        
-        while (this.running && this.flow) {
+        while (thread.isAlive() && this.running && this.flow) {
             try {
                 msg = TATUWrapper.buildFlowMessageResponse(deviceName, sensorName, flowPublish, flowCollect, this.getDataFlow());
                 this.publisher.publish(topic, new MqttMessage(msg.getBytes()));
                 Thread.sleep(flowPublish);
             } catch (InterruptedException | MqttException ex) {
                 this.running = false;
-                Logger.getLogger(Sensor.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        this.running = false;
     }
 }

@@ -17,8 +17,8 @@ import org.json.JSONException;
 
 public final class TATUWrapper {
 
-    public static String topicBase = "dev/";
-    public static String topicResponse = "/RES";
+    public static final String topicBase = "dev/";
+    public static final String topicResponse = "/RES";
 
     public static String buildTATUFlowInfoMessage(String sensorId, int collectSeconds, int publishSeconds) {
         return buildTATUFlow(sensorId, collectSeconds, publishSeconds, "INFO ");
@@ -97,7 +97,7 @@ public final class TATUWrapper {
     }
 
     public static boolean isTATUResponse(String message) {
-        return !isValidTATUMessage(message)
+        return isValidTATUMessage(message)
                 && isValidTATUAnswer(message);
     }
 
@@ -116,18 +116,17 @@ public final class TATUWrapper {
         }
     }
 
-    public static String getMethod(String message){
-        if(isValidTATUMessage(message)){
-            if(isTATUResponse(message) && isValidTATUAnswer(message)){
-                JSONObject response = new JSONObject(message);
-                return response.getJSONObject("HEADER").getString("METHOD");
-            }else{
+    public static String getMethod(String message) {
+        if (isValidTATUMessage(message)) {
+            if (isTATUResponse(message)) {
+                return new JSONObject(message).getString("METHOD");
+            } else {
                 return message.split(" ")[0];
             }
         }
         return TATUMethods.INVALID.name();
     }
-    
+
     public static String getDeviceIdByTATUAnswer(String answer) {
         JSONObject json = new JSONObject(answer);
         return json.getJSONObject("HEADER").getString("NAME");
@@ -142,8 +141,8 @@ public final class TATUWrapper {
         }
         return sensorId;
     }
-    
-    public static String getSensorIdByTATURequest(String request){
+
+    public static String getSensorIdByTATURequest(String request) {
         return request.split(" ")[2];
     }
 

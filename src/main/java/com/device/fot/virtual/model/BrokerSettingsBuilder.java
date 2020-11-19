@@ -57,7 +57,6 @@ public class BrokerSettingsBuilder {
         if (this.password == null || this.password.isEmpty()) {
             this.password = "";
         }
-        System.out.println("BrokerSettings configured!");
         return new BrokerSettings(url, port, serverId, username, password);
     }
 
