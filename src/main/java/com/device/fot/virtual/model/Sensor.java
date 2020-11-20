@@ -67,7 +67,7 @@ public class Sensor implements Runnable {
     public void startFlow() {
         this.startFlow(flowCollect, flowPublish);
     }
-
+    
     public void startFlow(int newFlowCollect, int newFlowPublish) {
         if (newFlowCollect >= 1 && newFlowPublish >= 1) {
             this.flowCollect = newFlowCollect;
@@ -118,7 +118,7 @@ public class Sensor implements Runnable {
     @Override
     public void run() {
         String msg;
-        String topic = TATUWrapper.buildTATUResponseTopic(deviceName, sensorName);
+        String topic = TATUWrapper.buildTATUResponseTopic(deviceName);
         this.flow = true;
         this.running = true;
         while (thread.isAlive() && this.running && this.flow) {

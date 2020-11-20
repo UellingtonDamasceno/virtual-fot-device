@@ -40,21 +40,17 @@ public final class TATUWrapper {
                 .append("}").toString();
     }
 
-    public static String buildTATUTopic(String deviceName, String sensorName) {
+    public static String buildTATUTopic(String deviceName) {
         return new StringBuilder()
                 .append(topicBase)
                 .append(deviceName)
-                .append("/")
-                .append(sensorName)
                 .toString();
     }
 
-    public static String buildTATUResponseTopic(String deviceName, String sensorName) {
+    public static String buildTATUResponseTopic(String deviceName) {
         return new StringBuilder()
                 .append(topicBase)
                 .append(deviceName)
-                .append("/")
-                .append(sensorName)
                 .append(topicResponse)
                 .toString();
     }

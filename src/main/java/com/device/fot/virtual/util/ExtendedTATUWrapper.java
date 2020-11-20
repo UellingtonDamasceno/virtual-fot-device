@@ -15,7 +15,7 @@ public final class ExtendedTATUWrapper {
     public static String getConnectionTopic() {
         return new StringBuilder()
                 .append(TOPIC_BASE)
-                .append("NEW_CONNECTIONS")
+                .append("CONNECTIONS")
                 .toString();
     }
 

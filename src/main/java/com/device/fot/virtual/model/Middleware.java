@@ -38,6 +38,7 @@ public class Middleware implements MqttCallback {
         switch (tatuMessage.getMethod()) {
             case FLOW:
                 Sensor flowSensor = this.device.getSensorByName(tatuMessage.getTarget());
+                
                 JSONObject flow = new JSONObject(tatuMessage.getMessageContent());
                 flowSensor.startFlow(flow.getInt("collect"), flow.getInt("publish"));
                 break;
@@ -49,7 +50,7 @@ public class Middleware implements MqttCallback {
                         getSensor.getCurrentValue());
 
                 mqttResponse.setPayload(jsonResponse.getBytes());
-                String publishTopic = TATUWrapper.buildTATUResponseTopic(device.getName(), getSensor.getSensorName());
+                String publishTopic = TATUWrapper.buildTATUResponseTopic(device.getName());
                 this.device.publish(publishTopic, mqttResponse);
                 System.out.println("PUBLISH IN TOPIC: " + publishTopic);
                 break;

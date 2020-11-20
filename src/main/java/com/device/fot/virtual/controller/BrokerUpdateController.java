@@ -54,6 +54,7 @@ public class BrokerUpdateController implements MqttCallback, Runnable {
                 this.brokerSettings = brokerSettings;
 
                 this.timeOutCounter = new Thread(this);
+                this.timeOutCounter.setName("BROKER/UPDATE/TIMEOUT");
                 this.timeOutCounter.start();
 
             } catch (MqttException ex) {

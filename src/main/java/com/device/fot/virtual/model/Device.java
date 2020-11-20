@@ -83,7 +83,7 @@ public class Device {
             this.publisher.connect(options);
         }
 
-        this.subscriber.subscribe(TATUWrapper.buildTATUTopic(this.name, "+"), 1);
+        this.subscriber.subscribe(TATUWrapper.buildTATUTopic(this.name), 1);
         this.sensors.values().forEach(sensor -> sensor.setPublisher(publisher));
 
         this.brokerSettings = brokerSettings;
