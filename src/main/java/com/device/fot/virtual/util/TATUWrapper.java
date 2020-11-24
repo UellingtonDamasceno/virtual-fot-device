@@ -98,7 +98,7 @@ public final class TATUWrapper {
     }
 
     public static boolean isValidTATUMessage(String message) {
-        return !(message.isBlank() || message.length() <= 10);
+        return !(message == null || message.isEmpty() || message.length() <= 10);
     }
 
     //{"CODE":"POST","METHOD":"FLOW","HEADER":{"NAME":"ufbaino04"},"BODY":{"temperatureSensor":["36","26"],"FLOW":{"publish":10000,"collect":5000}}}
