@@ -18,7 +18,7 @@ public class Device {
     private BrokerSettings brokerSettings;
     private Map<String, Sensor> sensors;
 
-    private MqttClient publisher, subscriber;
+    private MqttClient client;
     private boolean updating;
     private MqttCallback midlleware;
 
@@ -67,24 +67,19 @@ public class Device {
 
     public void connect(BrokerSettings brokerSettings) throws MqttException {
 
-        this.subscriber = brokerSettings.getSubscriber();
-        this.publisher = brokerSettings.getPublisher();
+        this.client = brokerSettings.getClient();
 
         MqttConnectOptions options = brokerSettings.getConnectionOptions();
         this.midlleware = (midlleware == null) ? midlleware = new Middleware(this) : midlleware;
 
-        this.subscriber.setCallback(midlleware);
-        this.publisher.setCallback(midlleware);
+        this.client.setCallback(midlleware);
 
-        if (!this.subscriber.isConnected()) {
-            this.subscriber.connect(options);
-        }
-        if (!this.publisher.isConnected()) {
-            this.publisher.connect(options);
+        if (!this.client.isConnected()) {
+            this.client.connect(options);
         }
 
-        this.subscriber.subscribe(TATUWrapper.buildTATUTopic(this.name), 1);
-        this.sensors.values().forEach(sensor -> sensor.setPublisher(publisher));
+        this.client.subscribe(TATUWrapper.buildTATUTopic(this.name), 1);
+        this.sensors.values().forEach(sensor -> sensor.setPublisher(client));
 
         this.brokerSettings = brokerSettings;
     }
@@ -92,7 +87,7 @@ public class Device {
     public void updateBrokerSettings(BrokerSettings newBrokerSettings) throws MqttException {
         BrokerSettings oldBrokerSettings = this.brokerSettings;
         this.pauseFlow();
-        this.brokerSettings.disconnectAllClients();
+        this.brokerSettings.disconnectClient();
         try {
             this.connect(newBrokerSettings);
         } catch (MqttException ex) {
@@ -103,6 +98,6 @@ public class Device {
     }
 
     public void publish(String topic, MqttMessage message) throws MqttException {
-        this.publisher.publish(topic, message);
+        this.client.publish(topic, message);
     }
 }

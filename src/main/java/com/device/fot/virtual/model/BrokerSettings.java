@@ -19,7 +19,7 @@ public class BrokerSettings {
     private final String username;
     private final String password;
 
-    private MqttClient publisher, subscriber;
+    private MqttClient client;
     private int hashCode;
 
     protected BrokerSettings(String url, String port, String serverId, String username, String password) {
@@ -56,16 +56,10 @@ public class BrokerSettings {
         return password;
     }
 
-    public MqttClient getSubscriber() throws MqttException {
-        return this.subscriber == null
-                ? this.subscriber = new MqttClient(this.uri, serverId.concat("_SUB"))
-                : this.subscriber;
-    }
-
-    public MqttClient getPublisher() throws MqttException {
-        return (this.publisher == null)
-                ? this.publisher = new MqttClient(this.uri, serverId.concat("_PUB"))
-                : this.publisher;
+    public MqttClient getClient() throws MqttException {
+        return this.client == null
+                ? this.client = new MqttClient(this.uri, serverId.concat("_CLIENT"))
+                : this.client;
     }
 
     public MqttConnectOptions getConnectionOptions() {
@@ -78,22 +72,9 @@ public class BrokerSettings {
         }
         return connection;
     }
-    
-    public void disconnectPublisher(){
-        this.disconnect(this.publisher);
-    }
-    
-    public void disconnectSubscriber(){
-        this.disconnect(this.subscriber);
-    }
-    
-    public void disconnectAllClients(){
-        this.disconnect(publisher);
-        this.disconnect(subscriber);
-    }
-    
-    private void disconnect(MqttClient client){
-        if(client != null && client.isConnected()){
+
+    public void disconnectClient() {
+        if (client != null && client.isConnected()) {
             try {
                 client.disconnect();
             } catch (MqttException ex) {

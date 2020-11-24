@@ -29,27 +29,22 @@ public class BrokerUpdateController implements MqttCallback, Runnable {
     }
 
     public void startUpdateBroker(BrokerSettings brokerSettings) {
-        MqttClient newSubscriber = null;
-        MqttClient newPublisher = null;
+        MqttClient newClient = null;
         if (!this.device.isUpdating()) {
             try {
                 this.device.setIsUpdating(true);
-                newSubscriber = brokerSettings.getSubscriber();
-                newPublisher = brokerSettings.getPublisher();
+                newClient = brokerSettings.getClient();
 
                 MqttConnectOptions newOptions = brokerSettings.getConnectionOptions();
 
-                newSubscriber.setCallback(this);
-                newPublisher.setCallback(this);
-
-                newSubscriber.connect(newOptions);
-                newPublisher.connect(newOptions);
+                newClient.setCallback(this);
+                newClient.connect(newOptions);
 
                 String connectionTopic = ExtendedTATUWrapper.getConnectionTopic();
                 String message = ExtendedTATUWrapper.buildConnectMessage(device.getName(), 10.000);
 
-                newSubscriber.subscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
-                newPublisher.publish(connectionTopic, new MqttMessage(message.getBytes()));
+                newClient.subscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
+                newClient.publish(connectionTopic, new MqttMessage(message.getBytes()));
 
                 this.brokerSettings = brokerSettings;
 
@@ -58,7 +53,7 @@ public class BrokerUpdateController implements MqttCallback, Runnable {
                 this.timeOutCounter.start();
 
             } catch (MqttException ex) {
-                brokerSettings.disconnectAllClients();
+                brokerSettings.disconnectClient();
                 device.setIsUpdating(false);
             }
         }
@@ -80,12 +75,12 @@ public class BrokerUpdateController implements MqttCallback, Runnable {
                 if (json.getJSONObject("BODY").getBoolean("CAN_CONNECT")) {
                     this.device.updateBrokerSettings(brokerSettings);
                 } else {
-                    this.brokerSettings.disconnectAllClients();
+                    this.brokerSettings.disconnectClient();
                 }
             }
         } else {
             this.device.setIsUpdating(false);
-            this.brokerSettings.disconnectAllClients();
+            this.brokerSettings.disconnectClient();
         }
     }
 
@@ -101,7 +96,7 @@ public class BrokerUpdateController implements MqttCallback, Runnable {
             this.timeOut = true;
             if (this.device.isUpdating()) {
                 this.device.setIsUpdating(false);
-                this.brokerSettings.disconnectAllClients();
+                this.brokerSettings.disconnectClient();
             }
         } catch (InterruptedException ex) {
         }

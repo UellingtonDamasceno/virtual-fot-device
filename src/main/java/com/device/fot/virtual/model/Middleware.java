@@ -89,7 +89,7 @@ public class Middleware implements MqttCallback {
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken imdt) {
-
+        
     }
 
     @Override
