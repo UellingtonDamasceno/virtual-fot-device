@@ -8,6 +8,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Function;
@@ -24,6 +26,7 @@ import org.json.JSONArray;
 public class Main {
 
     public static void main(String[] args) {
+        String deviceId = getDeviceId(args);
         try (InputStream input = Main.class.getResourceAsStream("broker.properties")) {
             if (input == null) {
                 System.out.println("Sorry, unable to find config.properties.");
@@ -37,10 +40,10 @@ public class Main {
                         .setPort(properties.getProperty("port"))
                         .setPassword(properties.getProperty("password"))
                         .setUsername(properties.getProperty("username"))
-                        .setServerId(properties.getProperty("id"))
+                        .setServerId(deviceId)
                         .build();
 
-                Map<String, Sensor> sensors = readSensors("sensors.json", properties.getProperty("id"));
+                Map<String, Sensor> sensors = readSensors("sensors.json", deviceId);
                 Device device = new Device(properties.getProperty("id"), sensors);
 
                 try {
@@ -54,7 +57,7 @@ public class Main {
         }
     }
 
-    public static Map<String, Sensor> readSensors(String fileName, String deviceName) throws IOException {
+    private static Map<String, Sensor> readSensors(String fileName, String deviceName) throws IOException {
         try (InputStream inputStream = Main.class.getResourceAsStream(fileName);
                 InputStreamReader inputReader = new InputStreamReader(inputStream);
                 BufferedReader bufferedReader = new BufferedReader(inputReader)) {
@@ -70,5 +73,17 @@ public class Main {
                     .map(sensorName -> new Sensor(deviceName, sensorName))
                     .collect(Collectors.toMap(Sensor::getSensorName, Function.identity()));
         }
+    }
+
+    private static String getDeviceId(String[] args) {
+        if (args.length == 2) {
+            return args[1];
+        } else if (args.length > 2) {
+            List<String> largs = Arrays.asList(args);
+            if (largs.contains("-di")) {
+                return largs.get(largs.indexOf("-di") + 1);
+            }
+        }
+        throw new IllegalArgumentException("The device id parameter was not found or is empty!");
     }
 }

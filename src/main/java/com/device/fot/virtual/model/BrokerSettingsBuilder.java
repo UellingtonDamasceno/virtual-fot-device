@@ -6,7 +6,7 @@ package com.device.fot.virtual.model;
  */
 public class BrokerSettingsBuilder {
 
-    private String serverId;
+    private static String serverId;
     private String url;
     private String port;
     private String username;
@@ -27,7 +27,9 @@ public class BrokerSettingsBuilder {
     }
 
     public BrokerSettingsBuilder setServerId(String serverId) {
-        this.serverId = serverId;
+        if (BrokerSettingsBuilder.serverId == null && serverId != null && !serverId.isEmpty()) {
+            BrokerSettingsBuilder.serverId = serverId;
+        } 
         return this;
     }
 
@@ -42,8 +44,8 @@ public class BrokerSettingsBuilder {
     }
 
     public BrokerSettings build() {
-        if (this.serverId == null || this.serverId.isEmpty()) {
-            this.serverId = "VIRTUAL_FOT_DEVICE";
+        if (BrokerSettingsBuilder.serverId == null || BrokerSettingsBuilder.serverId.isEmpty()) {
+            BrokerSettingsBuilder.serverId = "VIRTUAL_FOT_DEVICE";
         }
         if (this.url == null || this.url.isEmpty()) {
             this.url = "tcp://localhost";
