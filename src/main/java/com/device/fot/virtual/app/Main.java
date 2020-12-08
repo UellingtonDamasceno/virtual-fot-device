@@ -44,7 +44,7 @@ public class Main {
                         .build();
 
                 Map<String, Sensor> sensors = readSensors("sensors.json", deviceId);
-                Device device = new Device(properties.getProperty("id"), sensors);
+                Device device = new Device(deviceId, sensors);
 
                 try {
                     device.connect(brokerSettings);

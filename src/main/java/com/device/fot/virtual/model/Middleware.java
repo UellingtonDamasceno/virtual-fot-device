@@ -94,6 +94,7 @@ public class Middleware implements MqttCallback {
 
     @Override
     public void connectionLost(Throwable cause) {
-        Logger.getLogger(Middleware.class.getName()).log(Level.SEVERE, null, cause);
+        System.out.println("Conexão caiu");
+//        Logger.getLogger(Middleware.class.getName()).log(Level.SEVERE, null, cause);
     }
 }

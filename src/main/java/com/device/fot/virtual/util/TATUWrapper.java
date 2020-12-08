@@ -93,11 +93,11 @@ public final class TATUWrapper {
     }
 
     public static boolean isTATUResponse(String message) {
-        return isValidTATUMessage(message)
+        return isValidMessage(message)
                 && isValidTATUAnswer(message);
     }
 
-    public static boolean isValidTATUMessage(String message) {
+    public static boolean isValidMessage(String message) {
         return !(message == null || message.isEmpty() || message.length() <= 10);
     }
 
@@ -113,8 +113,8 @@ public final class TATUWrapper {
     }
 
     public static String getMethod(String message) {
-        if (isValidTATUMessage(message)) {
-            if (isTATUResponse(message)) {
+        if (isValidMessage(message)) {
+            if (isValidTATUAnswer(message)) {
                 return new JSONObject(message).getString("METHOD");
             } else {
                 return message.split(" ")[0];
