@@ -33,17 +33,17 @@ responde no tópico ``dev/DEVICE_ID/RES``.
   > de ``publish_time`` ou ``collect_time`` menor ou igual a zero. 
 
 ### SET
-  Atualmente este dispositivo somente é capaz de responder a seguinte solicitação
-  do tipo SET.
+Atualmente este dispositivo somente é capaz de responder a seguinte solicitação
+do tipo SET.
   
-  SET VALUE mqttBroker {id:String, url:String, port:int, user:String, password:String}
+    SET VALUE mqttBroker {"id":"String", "url":"String", "port":"int", "user":"String", "password":"String"}
 
 ### CONNECT
 
 As solicitações do tipo ``CONNECT`` devem ser enviadas para o tópico ``dev/CONNECTIONS``
 e são respondidas no tópico ``dev/CONNECTIONS/RES``.
 
-    CONNECT VALUE BROKER {"HEADER":{"NAME":String}, "TIME_OUT":Double}
+    CONNECT VALUE BROKER {"HEADER":{"NAME":"String"}, "TIME_OUT":"Double"}
   
 O ``TIME_OUT`` é utilizado para informar ao getaway quanto tempo o device está disposto
 a esperar resposta se pode ou não efetuar a transição de getaways. 
