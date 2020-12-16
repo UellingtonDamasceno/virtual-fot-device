@@ -15,17 +15,17 @@ public class BrokerSettings {
     private final String uri;
     private final String url;
     private final String port;
-    private final String serverId;
+    private final String deviceId;
     private final String username;
     private final String password;
 
     private MqttClient client;
     private int hashCode;
 
-    protected BrokerSettings(String url, String port, String serverId, String username, String password) {
+    protected BrokerSettings(String url, String port, String deviceId, String username, String password) {
         this.url = url;
         this.port = port;
-        this.serverId = serverId;
+        this.deviceId = deviceId;
         this.username = username;
         this.password = password;
         this.uri = new StringBuilder()
@@ -44,8 +44,8 @@ public class BrokerSettings {
         return port;
     }
 
-    public String getServerId() {
-        return serverId;
+    public String getDeviceId() {
+        return deviceId;
     }
 
     public String getUsername() {
@@ -58,7 +58,7 @@ public class BrokerSettings {
 
     public MqttClient getClient() throws MqttException {
         return this.client == null
-                ? this.client = new MqttClient(this.uri, serverId.concat("_CLIENT"))
+                ? this.client = new MqttClient(this.uri, deviceId.concat("_CLIENT"))
                 : this.client;
     }
 
@@ -86,7 +86,7 @@ public class BrokerSettings {
     @Override
     public int hashCode() {
         if (this.hashCode != -1) {
-            this.hashCode = this.serverId.hashCode();
+            this.hashCode = this.deviceId.hashCode();
             this.hashCode += this.uri.hashCode();
             this.hashCode += this.password.hashCode();
             this.hashCode += this.username.hashCode();
@@ -99,6 +99,18 @@ public class BrokerSettings {
     public boolean equals(Object obj) {
         return (obj instanceof BrokerSettings)
                 && (((BrokerSettings) obj).hashCode() == this.hashCode());
+    }
+
+    @Override
+    public String toString() {
+        return "BrokerSettings{"
+                + "\n uri=" + uri
+                + "\n url=" + url
+                + "\n port=" + port
+                + "\n deviceId=" + deviceId
+                + "\n username=" + username
+                + "\n password=" + password
+                + "\n}";
     }
 
 }

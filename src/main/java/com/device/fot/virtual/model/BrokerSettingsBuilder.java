@@ -6,8 +6,8 @@ package com.device.fot.virtual.model;
  */
 public class BrokerSettingsBuilder {
 
-    private static String serverId;
-    private String url;
+    private static String deviceId;
+    private String brokerIp;
     private String port;
     private String username;
     private String password;
@@ -16,8 +16,8 @@ public class BrokerSettingsBuilder {
         return new BrokerSettingsBuilder();
     }
 
-    public BrokerSettingsBuilder setUrl(String url) {
-        this.url = url;
+    public BrokerSettingsBuilder setBrokerIp(String brokerIp) {
+        this.brokerIp = brokerIp;
         return this;
     }
 
@@ -26,9 +26,9 @@ public class BrokerSettingsBuilder {
         return this;
     }
 
-    public BrokerSettingsBuilder setServerId(String serverId) {
-        if (BrokerSettingsBuilder.serverId == null && serverId != null && !serverId.isEmpty()) {
-            BrokerSettingsBuilder.serverId = serverId;
+    public BrokerSettingsBuilder deviceId(String deviceId) {
+        if (BrokerSettingsBuilder.deviceId == null && deviceId != null && !deviceId.isEmpty()) {
+            BrokerSettingsBuilder.deviceId = deviceId;
         } 
         return this;
     }
@@ -44,11 +44,13 @@ public class BrokerSettingsBuilder {
     }
 
     public BrokerSettings build() {
-        if (BrokerSettingsBuilder.serverId == null || BrokerSettingsBuilder.serverId.isEmpty()) {
-            BrokerSettingsBuilder.serverId = "VIRTUAL_FOT_DEVICE";
+        if (BrokerSettingsBuilder.deviceId == null || BrokerSettingsBuilder.deviceId.isEmpty()) {
+            BrokerSettingsBuilder.deviceId = "VIRTUAL_FOT_DEVICE";
         }
-        if (this.url == null || this.url.isEmpty()) {
-            this.url = "tcp://localhost";
+        if (this.brokerIp == null || this.brokerIp.isEmpty()) {
+            this.brokerIp = "tcp://localhost";
+        }else if(!brokerIp.contains("tcp://") && !brokerIp.contains("udp://")){
+            this.brokerIp = "tcp://"+brokerIp;
         }
         if (this.port == null || this.port.isEmpty()) {
             this.port = "1883";
@@ -59,7 +61,7 @@ public class BrokerSettingsBuilder {
         if (this.password == null || this.password.isEmpty()) {
             this.password = "";
         }
-        return new BrokerSettings(url, port, serverId, username, password);
+        return new BrokerSettings(brokerIp, port, deviceId, username, password);
     }
 
 }

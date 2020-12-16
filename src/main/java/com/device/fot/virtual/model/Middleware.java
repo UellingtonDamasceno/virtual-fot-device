@@ -3,8 +3,6 @@ package com.device.fot.virtual.model;
 import com.device.fot.virtual.controller.BrokerUpdateController;
 import com.device.fot.virtual.tatu.TATUMessage;
 import com.device.fot.virtual.util.TATUWrapper;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -61,8 +59,8 @@ public class Middleware implements MqttCallback {
                     JSONObject newBrokerSettingsJson = new JSONObject(newMessage);
 
                     BrokerSettings newBrokerSettings = BrokerSettingsBuilder.builder()
-                            .setServerId(newBrokerSettingsJson.getString("id"))
-                            .setUrl(newBrokerSettingsJson.getString("url"))
+                            .deviceId(newBrokerSettingsJson.getString("id"))
+                            .setBrokerIp(newBrokerSettingsJson.getString("url"))
                             .setPort(newBrokerSettingsJson.getString("port"))
                             .setUsername(newBrokerSettingsJson.getString("user"))
                             .setPassword(newBrokerSettingsJson.getString("password"))
