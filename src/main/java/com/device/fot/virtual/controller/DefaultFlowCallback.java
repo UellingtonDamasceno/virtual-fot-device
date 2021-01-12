@@ -1,8 +1,13 @@
-package com.device.fot.virtual.model;
+package com.device.fot.virtual.controller;
 
-import com.device.fot.virtual.controller.BrokerUpdateController;
-import com.device.fot.virtual.tatu.TATUMessage;
-import com.device.fot.virtual.util.TATUWrapper;
+import com.device.fot.virtual.model.BrokerSettings;
+import com.device.fot.virtual.model.BrokerSettingsBuilder;
+import com.device.fot.virtual.model.FoTDevice;
+import com.device.fot.virtual.model.FoTSensor;
+import com.device.fot.virtual.model.NullFoTSensor;
+import static extended.tatu.wrapper.enums.ExtendedTATUMethods.*;
+import extended.tatu.wrapper.model.TATUMessage;
+import extended.tatu.wrapper.util.TATUWrapper;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -12,21 +17,21 @@ import org.json.JSONObject;
  *
  * @author Uelligton Damasceno
  */
-public class Middleware implements MqttCallback {
+public class DefaultFlowCallback implements MqttCallback {
 
-    private Device device;
-    private BrokerUpdateController brokerUpdateController;
-    
-    public Middleware(Device device) {
+    private FoTDevice device;
+    private BrokerUpdateCallback brokerUpdateController;
+
+    public DefaultFlowCallback(FoTDevice device) {
         this.device = device;
-        this.brokerUpdateController = new BrokerUpdateController(device);
+        this.brokerUpdateController = new BrokerUpdateCallback(device);
     }
 
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         TATUMessage tatuMessage = new TATUMessage(mqttMessage.getPayload());
         MqttMessage mqttResponse = new MqttMessage();
-        String jsonResponse;
+        FoTSensor sensor;
 
         System.out.println("============================");
         System.out.println("MQTT_MESSAGE: " + new String(mqttMessage.getPayload()));
@@ -35,20 +40,20 @@ public class Middleware implements MqttCallback {
 
         switch (tatuMessage.getMethod()) {
             case FLOW:
-                Sensor flowSensor = this.device.getSensorByName(tatuMessage.getTarget());
-                
+                sensor = (FoTSensor) device.getSensorBySensorId(tatuMessage.getTarget())
+                        .orElse(NullFoTSensor.getInstance());
                 JSONObject flow = new JSONObject(tatuMessage.getMessageContent());
-                flowSensor.startFlow(flow.getInt("collect"), flow.getInt("publish"));
+                sensor.startFlow(flow.getInt("collect"), flow.getInt("publish"));
                 break;
             case GET:
-                Sensor getSensor = this.device.getSensorByName(tatuMessage.getTarget());
-
-                jsonResponse = TATUWrapper.buildGetMessageResponse(device.getName(),
-                        getSensor.getSensorName(),
-                        getSensor.getCurrentValue());
+                sensor = (FoTSensor) device.getSensorBySensorId(tatuMessage.getTarget())
+                        .orElse(NullFoTSensor.getInstance());
+                String jsonResponse = TATUWrapper.buildGetMessageResponse(device.getId(),
+                        sensor.getId(),
+                        sensor.getCurrentValue());
 
                 mqttResponse.setPayload(jsonResponse.getBytes());
-                String publishTopic = TATUWrapper.buildTATUResponseTopic(device.getName());
+                String publishTopic = TATUWrapper.buildTATUResponseTopic(device.getId());
                 this.device.publish(publishTopic, mqttResponse);
                 System.out.println("PUBLISH IN TOPIC: " + publishTopic);
                 break;
@@ -67,8 +72,8 @@ public class Middleware implements MqttCallback {
                             .build();
 
                     this.brokerUpdateController.startUpdateBroker(newBrokerSettings);
-                }else{
-                    System.out.println("The device is updating: "+ this.device.isUpdating());
+                } else {
+                    System.out.println("The device is updating: " + this.device.isUpdating());
                 }
                 break;
             case EVT:
@@ -87,7 +92,7 @@ public class Middleware implements MqttCallback {
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken imdt) {
-        
+
     }
 
     @Override

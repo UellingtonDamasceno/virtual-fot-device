@@ -2,17 +2,18 @@ package com.device.fot.virtual.app;
 
 import com.device.fot.virtual.model.BrokerSettings;
 import com.device.fot.virtual.model.BrokerSettingsBuilder;
-import com.device.fot.virtual.model.Device;
-import com.device.fot.virtual.model.Sensor;
+import com.device.fot.virtual.model.FoTDevice;
+import com.device.fot.virtual.model.FoTSensor;
 import com.device.fot.virtual.util.CLI;
+import extended.tatu.wrapper.model.Sensor;
+import extended.tatu.wrapper.util.SensorWrapper;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Map;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -26,7 +27,7 @@ import org.json.JSONArray;
 public class Main {
 
     public static void main(String[] args) {
-        try (InputStream input = Main.class.getResourceAsStream("broker.properties")) {
+        try ( InputStream input = Main.class.getResourceAsStream("broker.properties")) {
             if (input == null) {
                 System.out.println("Sorry, unable to find config.properties.");
             } else {
@@ -35,19 +36,19 @@ public class Main {
 
                 String deviceId = CLI.getDeviceId(args)
                         .orElse(UUID.randomUUID().toString());
-                
+
                 String brokerIp = CLI.getBrokerIp(args)
                         .orElse(props.getProperty("brokerId"));
-                
+
                 String port = CLI.getPort(args)
                         .orElse(props.getProperty("port"));
-               
+
                 String password = CLI.getPassword(args)
                         .orElse(props.getProperty("password"));
-                
+
                 String user = CLI.getUsername(args)
                         .orElse(props.getProperty("username"));
-                
+
                 BrokerSettings brokerSettings = BrokerSettingsBuilder
                         .builder()
                         .setBrokerIp(brokerIp)
@@ -56,11 +57,14 @@ public class Main {
                         .setUsername(user)
                         .deviceId(deviceId)
                         .build();
-                
+
                 System.out.println(brokerSettings);
-                
-                Map<String, Sensor> sensors = readSensors("sensors.json", deviceId);
-                Device device = new Device(deviceId, sensors);
+                List<Sensor> sensors = readSensors("sensors.json", deviceId)
+                        .stream()
+                        .map(Sensor.class::cast)
+                        .collect(Collectors.toList());
+
+                FoTDevice device = new FoTDevice(deviceId, sensors);
 
                 try {
                     device.connect(brokerSettings);
@@ -73,19 +77,16 @@ public class Main {
         }
     }
 
-    private static Map<String, Sensor> readSensors(String fileName, String deviceName) throws IOException {
+    private static List<FoTSensor> readSensors(String fileName, String deviceName) throws IOException {
         try ( InputStream inputStream = Main.class.getResourceAsStream(fileName);  InputStreamReader inputReader = new InputStreamReader(inputStream);  BufferedReader bufferedReader = new BufferedReader(inputReader)) {
 
             String textFile = bufferedReader.lines().collect(Collectors.joining());
             JSONArray sensorsArray = new JSONArray(textFile);
-            return sensorsArray
-                    .toList()
+            return SensorWrapper.getAllSensors(sensorsArray)
                     .stream()
-                    .map(Map.class::cast)
-                    .map(jsonObject -> jsonObject.get("name"))
-                    .map(String.class::cast)
-                    .map(sensorName -> new Sensor(deviceName, sensorName))
-                    .collect(Collectors.toMap(Sensor::getSensorName, Function.identity()));
+                    .map(sensor -> new FoTSensor(deviceName, sensor))
+                    .collect(Collectors.toList());
+
         }
     }
 

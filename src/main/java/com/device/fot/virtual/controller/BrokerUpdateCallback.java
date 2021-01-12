@@ -1,10 +1,10 @@
 package com.device.fot.virtual.controller;
 
 import com.device.fot.virtual.model.BrokerSettings;
-import com.device.fot.virtual.model.Device;
-import com.device.fot.virtual.tatu.TATUMessage;
-import com.device.fot.virtual.tatu.TATUMethods;
-import com.device.fot.virtual.util.ExtendedTATUWrapper;
+import com.device.fot.virtual.model.FoTDevice;
+import extended.tatu.wrapper.enums.ExtendedTATUMethods;
+import extended.tatu.wrapper.model.TATUMessage;
+import extended.tatu.wrapper.util.ExtendedTATUWrapper;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -17,14 +17,14 @@ import org.json.JSONObject;
  *
  * @author Uellington Damasceno
  */
-public class BrokerUpdateController implements MqttCallback, Runnable {
+public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
-    private Device device;
+    private FoTDevice device;
     private BrokerSettings brokerSettings;
     private Thread timeOutCounter;
     private boolean timeOut;
 
-    public BrokerUpdateController(Device device) {
+    public BrokerUpdateCallback(FoTDevice device) {
         this.device = device;
     }
 
@@ -41,7 +41,7 @@ public class BrokerUpdateController implements MqttCallback, Runnable {
                 newClient.connect(newOptions);
 
                 String connectionTopic = ExtendedTATUWrapper.getConnectionTopic();
-                String message = ExtendedTATUWrapper.buildConnectMessage(device.getName(), 10.000);
+                String message = ExtendedTATUWrapper.buildConnectMessage(device.getId(), 10.000);
 
                 newClient.subscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
                 newClient.publish(connectionTopic, new MqttMessage(message.getBytes()));
@@ -69,7 +69,7 @@ public class BrokerUpdateController implements MqttCallback, Runnable {
         if (!this.timeOut) {
             String message = new String(mqttMessage.getPayload());
             TATUMessage tatuMessage = new TATUMessage(message);
-            if (tatuMessage.isResponse() && tatuMessage.getMethod().equals(TATUMethods.CONNACK)) {
+            if (tatuMessage.isResponse() && tatuMessage.getMethod().equals(ExtendedTATUMethods.CONNACK)) {
                 this.timeOutCounter.interrupt();
                 JSONObject json = new JSONObject(tatuMessage.getMessageContent());
                 if (json.getJSONObject("BODY").getBoolean("CAN_CONNECT")) {
