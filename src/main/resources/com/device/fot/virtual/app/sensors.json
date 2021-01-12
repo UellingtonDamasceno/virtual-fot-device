@@ -1,6 +1,21 @@
 [
-    {"name": "a"},
-    {"name": "b"},
-    {"name": "c"}
+    {
+        "id": "a",
+        "type": "",
+        "collection_time": 0,
+        "publishing_time": 0
+    },
+    {
+        "id": "b",
+        "type": "",
+        "collection_time": 0,
+        "publishing_time": 0
+    },
+    {
+        "id": "c",
+        "type": "",
+        "collection_time": 0,
+        "publishing_time": 0
+    }
 ]
 
