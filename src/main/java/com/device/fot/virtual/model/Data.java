@@ -1,62 +1,50 @@
 package com.device.fot.virtual.model;
 
-import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
-public class Data {
+public class Data<T> {
 
-    private Device device;
-    private Sensor sensor;
-    private String value;
-    private Date startTime;
-    private Date endTime;
+    private final long timestamp;
+    private final String deviceId;
+    private final String sensorId;
+    private final List<T> values;
 
-    public Data(Device device, Sensor sensor, String value, Date startTime,
-            Date endTime) {
-        this.device = device;
-        this.sensor = sensor;
-        this.value = value;
-        this.startTime = startTime;
-        this.endTime = endTime;
+    public Data(String deviceId, String sensorId, List<T> values, long timestamp) {
+        this.timestamp = timestamp;
+        this.deviceId = deviceId;
+        this.sensorId = sensorId;
+        this.values = values;
     }
 
-    public Sensor getSensor() {
-        return sensor;
+    public long getTimestamp() {
+        return timestamp;
     }
 
-    public void setSensor(Sensor sensor) {
-        this.sensor = sensor;
+    public String getDeviceId() {
+        return deviceId;
     }
 
-    public String getValue() {
-        return value;
+    public String getSensorId() {
+        return sensorId;
     }
 
-    public void setValue(String value) {
-        this.value = value;
+    public List<T> getValues() {
+        return values;
     }
 
-    public Date getStartTime() {
-        return startTime;
-    }
+    @Override
+    public String toString() {
+        String allValues = this.values
+                .stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(","));
+        
+        return new StringBuilder().append(timestamp).append(",")
+                .append(deviceId).append(",")
+                .append(sensorId).append(",")
+                .append(allValues)
+                .toString();
 
-    public void setStartTime(Date startTime) {
-        this.startTime = startTime;
     }
-
-    public Date getEndTime() {
-        return endTime;
-    }
-
-    public void setEndTime(Date endTime) {
-        this.endTime = endTime;
-    }
-
-    public Device getDevice() {
-        return device;
-    }
-
-    public void setDevice(Device device) {
-        this.device = device;
-    }
-
 }

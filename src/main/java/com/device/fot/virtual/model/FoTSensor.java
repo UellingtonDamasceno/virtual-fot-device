@@ -1,8 +1,12 @@
 package com.device.fot.virtual.model;
 
-import com.device.fot.virtual.util.TATUWrapper;
+import extended.tatu.wrapper.model.Sensor;
+import extended.tatu.wrapper.util.TATUWrapper;
+import static extended.tatu.wrapper.util.TATUWrapper.buildFlowMessageResponse;
+import java.time.Instant;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -11,33 +15,39 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
  *
  * @author Uellington Damasceno
  */
-public class Sensor implements Runnable {
+public class FoTSensor extends Sensor implements Runnable {
 
-    private final String sensorName;
-    private String deviceName;
-    private int flowPublish, flowCollect;
+    private String deviceId;
     private boolean flow, running;
 
     private Thread thread;
     private MqttClient publisher;
 
-    public Sensor(String deviceName, String sensorName) {
-        this.sensorName = sensorName;
-        this.deviceName = deviceName;
+    public FoTSensor(String deviceId, Sensor sensor) {
+        this(deviceId,
+                sensor.getId(),
+                sensor.getType(),
+                sensor.getCollectionTime(),
+                sensor.getPublishingTime());
+    }
+
+    public FoTSensor(String deviceId,
+            String sensorName,
+            String type,
+            int publishingTime,
+            int collectionTime) {
+        super(sensorName, type, collectionTime, publishingTime);
+        this.deviceId = deviceId;
         this.flow = false;
         this.running = false;
     }
 
-    public String getSensorName() {
-        return this.sensorName;
+    public String deviceId() {
+        return this.deviceId;
     }
 
-    public String getDeviceName() {
-        return this.deviceName;
-    }
-
-    public void setDeviceName(String deviceName) {
-        this.deviceName = deviceName;
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
     }
 
     public void setPublisher(MqttClient publisher) {
@@ -48,33 +58,35 @@ public class Sensor implements Runnable {
         return this.flow;
     }
 
-    public void setFlowPublish(int flowPublish) {
-        if (flowPublish >= 1) {
-            this.flowPublish = flowPublish;
+    @Override
+    public void setPublishingTime(int publishingTime) {
+        if (publishingTime >= 1) {
+            this.publishingTime = publishingTime;
         } else {
             this.stopFlow();
         }
     }
 
-    public void setFlowCollect(int flowCollect) {
-        if (flowCollect >= 1) {
-            this.flowCollect = flowCollect;
+    @Override
+    public void setCollectionTime(int collectionTime) {
+        if (collectionTime >= 1) {
+            this.collectionTime = collectionTime;
         } else {
             this.stopFlow();
         }
     }
 
     public void startFlow() {
-        this.startFlow(flowCollect, flowPublish);
+        this.startFlow(this.collectionTime, this.publishingTime);
     }
-    
+
     public void startFlow(int newFlowCollect, int newFlowPublish) {
         if (newFlowCollect >= 1 && newFlowPublish >= 1) {
-            this.flowCollect = newFlowCollect;
-            this.flowPublish = newFlowPublish;
+            this.collectionTime = newFlowCollect;
+            this.publishingTime = newFlowPublish;
             if (thread == null || !thread.isAlive()) {
                 this.thread = new Thread(this);
-                this.thread.setName("FLOW/" + deviceName + "/" + sensorName);
+                this.thread.setName("FLOW/" + deviceId + "/" + id);
                 this.thread.start();
             }
         } else {
@@ -103,29 +115,34 @@ public class Sensor implements Runnable {
         return this.running;
     }
 
-    public Double getCurrentValue() {
-        return new Random().nextDouble();
+    public Integer getCurrentValue() {
+        return new Random().nextInt(11) + 30;
     }
 
-    private Double[] getDataFlow() {
-        return new Random()
-                .doubles(flowCollect, 0, 100)
-                .boxed()
-                .collect(Collectors.toList())
-                .toArray(new Double[flowCollect]);
+    private Data<Integer> getDataFlow() throws InterruptedException {
+        Random drawer = new Random();
+        int tempPublish = this.publishingTime;
+        List<Integer> values = new LinkedList();
+        while (tempPublish > 0) {
+            values.add(drawer.nextInt(11) + 30);
+            tempPublish -= this.publishingTime;
+            Thread.sleep(this.collectionTime);
+        }
+        return new Data(deviceId, this.id, values, Instant.now().toEpochMilli());
     }
 
     @Override
     public void run() {
         String msg;
-        String topic = TATUWrapper.buildTATUResponseTopic(deviceName);
+        String topic = TATUWrapper.buildTATUResponseTopic(deviceId);
         this.flow = true;
         this.running = true;
         while (thread.isAlive() && this.running && this.flow) {
             try {
-                msg = TATUWrapper.buildFlowMessageResponse(deviceName, sensorName, flowPublish, flowCollect, this.getDataFlow());
+                Data data = this.getDataFlow();
+                msg = buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime, data.getValues().toArray());
+
                 this.publisher.publish(topic, new MqttMessage(msg.getBytes()));
-                Thread.sleep(flowPublish);
             } catch (InterruptedException | MqttException ex) {
                 this.running = false;
             }
