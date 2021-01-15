@@ -1,9 +1,9 @@
 package com.device.fot.virtual.model;
 
+import com.device.fot.virtual.controller.DataController;
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
 import static extended.tatu.wrapper.util.TATUWrapper.buildFlowMessageResponse;
-import java.time.Instant;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -123,12 +123,12 @@ public class FoTSensor extends Sensor implements Runnable {
         Random drawer = new Random();
         int tempPublish = this.publishingTime;
         List<Integer> values = new LinkedList();
-        while (tempPublish > 0) {
+        while (tempPublish >= 0) {
             values.add(drawer.nextInt(11) + 30);
-            tempPublish -= this.publishingTime;
+            tempPublish -= this.collectionTime;
             Thread.sleep(this.collectionTime);
         }
-        return new Data(deviceId, this.id, values, Instant.now().toEpochMilli());
+        return new Data(this.deviceId, this.id, values);
     }
 
     @Override
@@ -141,8 +141,8 @@ public class FoTSensor extends Sensor implements Runnable {
             try {
                 Data data = this.getDataFlow();
                 msg = buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime, data.getValues().toArray());
-
                 this.publisher.publish(topic, new MqttMessage(msg.getBytes()));
+                DataController.put(data);
             } catch (InterruptedException | MqttException ex) {
                 this.running = false;
             }

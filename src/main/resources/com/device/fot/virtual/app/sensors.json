@@ -1,19 +1,19 @@
 [
     {
         "id": "a",
-        "type": "",
+        "type": "aa",
         "collection_time": 0,
         "publishing_time": 0
     },
     {
         "id": "b",
-        "type": "",
+        "type": "bb",
         "collection_time": 0,
         "publishing_time": 0
     },
     {
         "id": "c",
-        "type": "",
+        "type": "cc",
         "collection_time": 0,
         "publishing_time": 0
     }

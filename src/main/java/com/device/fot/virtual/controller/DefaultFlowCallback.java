@@ -8,6 +8,8 @@ import com.device.fot.virtual.model.NullFoTSensor;
 import static extended.tatu.wrapper.enums.ExtendedTATUMethods.*;
 import extended.tatu.wrapper.model.TATUMessage;
 import extended.tatu.wrapper.util.TATUWrapper;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -97,7 +99,7 @@ public class DefaultFlowCallback implements MqttCallback {
 
     @Override
     public void connectionLost(Throwable cause) {
-        System.out.println("Conexão caiu");
-//        Logger.getLogger(Middleware.class.getName()).log(Level.SEVERE, null, cause);
+//        System.out.println("Conexão caiu");
+        Logger.getLogger(DefaultFlowCallback.class.getName()).log(Level.SEVERE, null, cause);
     }
 }

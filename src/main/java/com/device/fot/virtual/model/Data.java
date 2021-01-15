@@ -1,5 +1,6 @@
 package com.device.fot.virtual.model;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,11 +11,15 @@ public class Data<T> {
     private final String sensorId;
     private final List<T> values;
 
+    public Data(String deviceId, String sensorId, List<T> values) {
+        this(deviceId, sensorId, values, Instant.now().toEpochMilli());
+    }
+
     public Data(String deviceId, String sensorId, List<T> values, long timestamp) {
-        this.timestamp = timestamp;
         this.deviceId = deviceId;
         this.sensorId = sensorId;
         this.values = values;
+        this.timestamp = timestamp;
     }
 
     public long getTimestamp() {
@@ -33,17 +38,19 @@ public class Data<T> {
         return values;
     }
 
+    private String valuesToString() {
+        return this.values
+                .stream()
+                .map(T::toString)
+                .collect(Collectors.joining(","));
+    }
+
     @Override
     public String toString() {
-        String allValues = this.values
-                .stream()
-                .map(Object::toString)
-                .collect(Collectors.joining(","));
-        
         return new StringBuilder().append(timestamp).append(",")
                 .append(deviceId).append(",")
                 .append(sensorId).append(",")
-                .append(allValues)
+                .append(valuesToString())
                 .toString();
 
     }

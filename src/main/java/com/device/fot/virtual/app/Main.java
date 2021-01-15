@@ -2,6 +2,7 @@ package com.device.fot.virtual.app;
 
 import com.device.fot.virtual.model.BrokerSettings;
 import com.device.fot.virtual.model.BrokerSettingsBuilder;
+import com.device.fot.virtual.controller.DataController;
 import com.device.fot.virtual.model.FoTDevice;
 import com.device.fot.virtual.model.FoTSensor;
 import com.device.fot.virtual.util.CLI;
@@ -27,13 +28,12 @@ import org.json.JSONArray;
 public class Main {
 
     public static void main(String[] args) {
-        try ( InputStream input = Main.class.getResourceAsStream("broker.properties")) {
+        try (InputStream input = Main.class.getResourceAsStream("broker.properties")) {
             if (input == null) {
                 System.out.println("Sorry, unable to find config.properties.");
             } else {
                 Properties props = new Properties();
                 props.load(input);
-
                 String deviceId = CLI.getDeviceId(args)
                         .orElse(UUID.randomUUID().toString());
 
@@ -58,6 +58,8 @@ public class Main {
                         .deviceId(deviceId)
                         .build();
 
+//                DataController.getInstance().createAndSetDataFile(deviceId+".csv");
+//                DataController.getInstance().start();
                 System.out.println(brokerSettings);
                 List<Sensor> sensors = readSensors("sensors.json", deviceId)
                         .stream()
@@ -78,7 +80,7 @@ public class Main {
     }
 
     private static List<FoTSensor> readSensors(String fileName, String deviceName) throws IOException {
-        try ( InputStream inputStream = Main.class.getResourceAsStream(fileName);  InputStreamReader inputReader = new InputStreamReader(inputStream);  BufferedReader bufferedReader = new BufferedReader(inputReader)) {
+        try (InputStream inputStream = Main.class.getResourceAsStream(fileName); InputStreamReader inputReader = new InputStreamReader(inputStream); BufferedReader bufferedReader = new BufferedReader(inputReader)) {
 
             String textFile = bufferedReader.lines().collect(Collectors.joining());
             JSONArray sensorsArray = new JSONArray(textFile);

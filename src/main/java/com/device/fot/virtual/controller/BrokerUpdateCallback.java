@@ -41,11 +41,10 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
                 newClient.connect(newOptions);
 
                 String connectionTopic = ExtendedTATUWrapper.getConnectionTopic();
-                String message = ExtendedTATUWrapper.buildConnectMessage(device.getId(), 10.000);
-
+                String message = ExtendedTATUWrapper.buildConnectMessage(device, 10.000);
                 newClient.subscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
                 newClient.publish(connectionTopic, new MqttMessage(message.getBytes()));
-
+                
                 this.brokerSettings = brokerSettings;
 
                 this.timeOutCounter = new Thread(this);
