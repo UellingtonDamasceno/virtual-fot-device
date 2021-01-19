@@ -22,7 +22,7 @@ public class FoTDevice extends Device {
     private BrokerSettings brokerSettings;
     private MqttClient client;
     private boolean updating;
-    private MqttCallback midlleware;
+    private MqttCallback callback;
 
     public FoTDevice(String name, List<Sensor> sensors) {
         super(name, new Random().nextDouble(), new Random().nextDouble(), sensors);
@@ -63,24 +63,25 @@ public class FoTDevice extends Device {
         this.client = brokerSettings.getClient();
 
         MqttConnectOptions options = brokerSettings.getConnectionOptions();
-        this.midlleware = (midlleware == null) ? midlleware = new DefaultFlowCallback(this) : midlleware;
+        this.callback = (callback == null) ? callback = new DefaultFlowCallback(this) : callback;
 
-        this.client.setCallback(midlleware);
-
+        this.client.setCallback(callback);
         if (!this.client.isConnected()) {
             this.client.connect(options);
         }
 
-        this.client.subscribe(TATUWrapper.buildTATUTopic(this.getId()), 1);
+        this.client.subscribe(TATUWrapper.buildTATUTopic(id), 1);
         this.getFoTSensors().forEach(sensor -> sensor.setPublisher(client));
 
+        if (this.brokerSettings != null) {
+            this.brokerSettings.disconnectClient();
+        }
         this.brokerSettings = brokerSettings;
     }
 
     public void updateBrokerSettings(BrokerSettings newBrokerSettings) throws MqttException {
         BrokerSettings oldBrokerSettings = this.brokerSettings;
         this.pauseFlow();
-        this.brokerSettings.disconnectClient();
         try {
             this.connect(newBrokerSettings);
         } catch (MqttException ex) {

@@ -1,8 +1,9 @@
 package com.device.fot.virtual.app;
 
+import com.device.fot.virtual.controller.BrokerUpdateCallback;
+import com.device.fot.virtual.controller.DataController;
 import com.device.fot.virtual.model.BrokerSettings;
 import com.device.fot.virtual.model.BrokerSettingsBuilder;
-import com.device.fot.virtual.controller.DataController;
 import com.device.fot.virtual.model.FoTDevice;
 import com.device.fot.virtual.model.FoTSensor;
 import com.device.fot.virtual.util.CLI;
@@ -15,10 +16,7 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.json.JSONArray;
 
 /**
@@ -38,7 +36,7 @@ public class Main {
                         .orElse(UUID.randomUUID().toString());
 
                 String brokerIp = CLI.getBrokerIp(args)
-                        .orElse(props.getProperty("brokerId"));
+                        .orElse(props.getProperty("brokerIp"));
 
                 String port = CLI.getPort(args)
                         .orElse(props.getProperty("port"));
@@ -58,8 +56,8 @@ public class Main {
                         .deviceId(deviceId)
                         .build();
 
-//                DataController.getInstance().createAndSetDataFile(deviceId+".csv");
-//                DataController.getInstance().start();
+                DataController.getInstance().createAndSetDataFile(deviceId+".csv");
+                DataController.getInstance().start();
                 System.out.println(brokerSettings);
                 List<Sensor> sensors = readSensors("sensors.json", deviceId)
                         .stream()
@@ -67,12 +65,8 @@ public class Main {
                         .collect(Collectors.toList());
 
                 FoTDevice device = new FoTDevice(deviceId, sensors);
-
-                try {
-                    device.connect(brokerSettings);
-                } catch (MqttException ex) {
-                    Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                BrokerUpdateCallback callback = new BrokerUpdateCallback(device);
+                callback.startUpdateBroker(brokerSettings, 10.0000);
             }
         } catch (IOException ex) {
             System.out.println("Sorry, unable to find sensors.json.");

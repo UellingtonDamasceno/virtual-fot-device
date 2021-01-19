@@ -21,14 +21,14 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
     private FoTDevice device;
     private BrokerSettings brokerSettings;
-    private Thread timeOutCounter;
-    private boolean timeOut;
+    private Thread timeoutCounter;
+    private boolean timeout;
 
     public BrokerUpdateCallback(FoTDevice device) {
         this.device = device;
     }
 
-    public void startUpdateBroker(BrokerSettings brokerSettings) {
+    public void startUpdateBroker(BrokerSettings brokerSettings, double timeout) {
         MqttClient newClient = null;
         if (!this.device.isUpdating()) {
             try {
@@ -39,17 +39,15 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
                 newClient.setCallback(this);
                 newClient.connect(newOptions);
-
                 String connectionTopic = ExtendedTATUWrapper.getConnectionTopic();
-                String message = ExtendedTATUWrapper.buildConnectMessage(device, 10.000);
+                String message = ExtendedTATUWrapper.buildConnectMessage(device, timeout);
                 newClient.subscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
                 newClient.publish(connectionTopic, new MqttMessage(message.getBytes()));
-                
                 this.brokerSettings = brokerSettings;
 
-                this.timeOutCounter = new Thread(this);
-                this.timeOutCounter.setName("BROKER/UPDATE/TIMEOUT");
-                this.timeOutCounter.start();
+                this.timeoutCounter = new Thread(this);
+                this.timeoutCounter.setName("BROKER/UPDATE/TIMEOUT");
+                this.timeoutCounter.start();
 
             } catch (MqttException ex) {
                 brokerSettings.disconnectClient();
@@ -65,11 +63,11 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        if (!this.timeOut) {
+        if (!this.timeout) {
             String message = new String(mqttMessage.getPayload());
             TATUMessage tatuMessage = new TATUMessage(message);
             if (tatuMessage.isResponse() && tatuMessage.getMethod().equals(ExtendedTATUMethods.CONNACK)) {
-                this.timeOutCounter.interrupt();
+                this.timeoutCounter.interrupt();
                 JSONObject json = new JSONObject(tatuMessage.getMessageContent());
                 if (json.getJSONObject("BODY").getBoolean("CAN_CONNECT")) {
                     this.device.updateBrokerSettings(brokerSettings);
@@ -90,9 +88,9 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
     @Override
     public void run() {
         try {
-            this.timeOut = false;
+            this.timeout = false;
             Thread.sleep(10000L);
-            this.timeOut = true;
+            this.timeout = true;
             if (this.device.isUpdating()) {
                 this.device.setIsUpdating(false);
                 this.brokerSettings.disconnectClient();

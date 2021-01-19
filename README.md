@@ -100,7 +100,7 @@ O dispositivo ao enviar uma mensgem do tipo ``CONNECT`` espera receber uma mensa
 ```
 # Persistência
 
-O dispositivo armazena todos os dados gerados em um arquivo que é nomeado pelo 
+O dispositivo armazena todos os dados gerados pelos sensores em um arquivo que é nomeado pelo 
 ``deviceId``+``.csv``. Esse arquivo pode ser encontrado na mesma pasta onde a aplicação
 foi executada.
 

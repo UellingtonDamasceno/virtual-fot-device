@@ -25,7 +25,7 @@ public class DataController implements Runnable {
     private int bufferSize = 256;
     private boolean running = false;
     private Thread thread;
-    
+
     private static final LinkedBlockingQueue<Data> BUFFER = new LinkedBlockingQueue();
 
     private DataController() {
@@ -44,8 +44,9 @@ public class DataController implements Runnable {
     public void start() {
         if (this.thread == null || !running) {
             this.thread = new Thread(this);
-            this.thread.start();
+            this.thread.setDaemon(true);
             this.thread.setName("FILE/WRITER");
+            this.thread.start();
         }
     }
 
