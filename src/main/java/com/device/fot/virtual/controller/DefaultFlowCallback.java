@@ -57,7 +57,6 @@ public class DefaultFlowCallback implements MqttCallback {
                 mqttResponse.setPayload(jsonResponse.getBytes());
                 String publishTopic = TATUWrapper.buildTATUResponseTopic(device.getId());
                 this.device.publish(publishTopic, mqttResponse);
-                System.out.println("PUBLISH IN TOPIC: " + publishTopic);
                 break;
             case SET:
                 if (tatuMessage.getTarget().equalsIgnoreCase("brokerMqtt") && !this.device.isUpdating()) {

@@ -39,10 +39,13 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
                 newClient.setCallback(this);
                 newClient.connect(newOptions);
+                
                 String connectionTopic = ExtendedTATUWrapper.getConnectionTopic();
                 String message = ExtendedTATUWrapper.buildConnectMessage(device, timeout);
+                
                 newClient.subscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
                 newClient.publish(connectionTopic, new MqttMessage(message.getBytes()));
+                
                 this.brokerSettings = brokerSettings;
 
                 this.timeoutCounter = new Thread(this);
@@ -71,6 +74,7 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
                 JSONObject json = new JSONObject(tatuMessage.getMessageContent());
                 if (json.getJSONObject("BODY").getBoolean("CAN_CONNECT")) {
                     this.device.updateBrokerSettings(brokerSettings);
+                    this.brokerSettings.getClient().unsubscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
                 } else {
                     this.brokerSettings.disconnectClient();
                 }
