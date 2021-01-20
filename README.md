@@ -15,7 +15,7 @@ broker MQTT utilizando algumas das primitivas do protocolo TATU e ExtendedTATU.
 
 # Inicialização
 Se nenhum argumento for informado durante a incialização o dispositivo virtual irá se conectar
-ao ``localhost`` utilizando a porta ``1883``.Todavia, é possível alterar essas informações
+ao ``localhost`` utilizando a porta ``1883``. Todavia, é possível alterar essas informações
 passando os seguintes paramentros de inicialização:
 
 | ARG | Significado | Descrição| Padrão |
@@ -25,8 +25,15 @@ passando os seguintes paramentros de inicialização:
 |**-pt**| Port     | Define a porta da conexão MQTT | 1883 |
 |**-us**| Username  | Define o usuário da conexão | karaf |
 |**-pw**| Password     | Define a senha de conexão do broker | karaf |
+<!--|**-to**| Timeout | Define o tempo inicial de espera para confirmação do broker | 10.000 ms|
+|**-ps**| Persistência | Define se o dispositivo deve persistir em arquivo as amostras coletadas | true |-->
 
   > Atenção: Não pode haver 2 dispositivos com o mesmo device ID em um mesmo broker.
+
+Após estabelecer a conexão com o broker o dispositivo irá enviar uma mensagem do tipo [CONNECT](#connect) 
+no tópico ``dev/CONNECTION`` e aguardará por uma resposta do tipo CONNACK. Caso a resposta não 
+chegue dentro de um timeout (definido como padrão em 10S) o dispositivo irá finalizar. 
+Caso contário o device funcionará normalmente aguardando por solicitações [compatíveis](#métodos-compatíveis).
 
 # Tópicos 
 Este dispositivo virtual recebe requisições no tópico ``dev/DEVICE_ID`` e
