@@ -29,6 +29,14 @@ public class CLI {
     public static Optional<String> getUsername(String... args){
         return getArgInList("-us", args);
     }
+    
+    public static Optional<String> getTimeout(String... args){
+        return getArgInList("-to", args);
+    }
+    
+    public static boolean hasParam(String arg, String... args){
+        return Arrays.asList(args).indexOf(arg) != -1;
+    }
 
     private static Optional<String> getArgInList(String arg, String... args) {
         List<String> largs = Arrays.asList(args);

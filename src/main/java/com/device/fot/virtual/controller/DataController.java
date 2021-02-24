@@ -23,7 +23,7 @@ public class DataController implements Runnable {
 
     private String fileName;
     private int bufferSize = 256;
-    private boolean running = false;
+    private boolean running, canSaveData;
     private Thread thread;
 
     private static final LinkedBlockingQueue<Data> BUFFER = new LinkedBlockingQueue();
@@ -35,6 +35,12 @@ public class DataController implements Runnable {
     private DataController(String fileName, int bufferSize) {
         this.fileName = fileName;
         this.bufferSize = bufferSize;
+        this.running = false;
+        this.canSaveData = false;
+    }
+    
+    public void setCanSaveData(boolean canSaveData){
+        this.canSaveData = canSaveData;
     }
 
     public static synchronized DataController getInstance() {
@@ -63,17 +69,19 @@ public class DataController implements Runnable {
     }
 
     private void write(List<String> lines) {
-        try (BufferedWriter w = Files.newBufferedWriter(Path.of(fileName), StandardOpenOption.WRITE)) {
-            lines.forEach(line -> {
-                try {
-                    w.write(line);
-                    w.newLine();
-                } catch (IOException ex) {
-                    Logger.getLogger(DataController.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            });
-        } catch (IOException ex) {
-            Logger.getLogger(DataController.class.getName()).log(Level.SEVERE, null, ex);
+        if (this.canSaveData) {
+            try (BufferedWriter w = Files.newBufferedWriter(Path.of(fileName), StandardOpenOption.WRITE)) {
+                lines.forEach(line -> {
+                    try {
+                        w.write(line);
+                        w.newLine();
+                    } catch (IOException ex) {
+                        Logger.getLogger(DataController.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                });
+            } catch (IOException ex) {
+                Logger.getLogger(DataController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
 

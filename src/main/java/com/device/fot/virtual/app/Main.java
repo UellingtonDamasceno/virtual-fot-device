@@ -47,6 +47,9 @@ public class Main {
                 String user = CLI.getUsername(args)
                         .orElse(props.getProperty("username"));
 
+                String timeout = CLI.getTimeout(args)
+                        .orElse("10000");
+                
                 BrokerSettings brokerSettings = BrokerSettingsBuilder
                         .builder()
                         .setBrokerIp(brokerIp)
@@ -58,7 +61,8 @@ public class Main {
 
                 DataController.getInstance().createAndSetDataFile(deviceId+".csv");
                 DataController.getInstance().start();
-                System.out.println(brokerSettings);
+                DataController.getInstance().setCanSaveData(CLI.hasParam("-ps", args));
+
                 List<Sensor> sensors = readSensors("sensors.json", deviceId)
                         .stream()
                         .map(Sensor.class::cast)
@@ -66,7 +70,7 @@ public class Main {
 
                 FoTDevice device = new FoTDevice(deviceId, sensors);
                 BrokerUpdateCallback callback = new BrokerUpdateCallback(device);
-                callback.startUpdateBroker(brokerSettings, 10.0000);
+                callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout));
             }
         } catch (IOException ex) {
             System.out.println("Sorry, unable to find sensors.json.");

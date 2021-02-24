@@ -25,8 +25,8 @@ passando os seguintes paramentros de inicialização:
 |**-pt**| Port     | Define a porta da conexão MQTT | 1883 |
 |**-us**| Username  | Define o usuário da conexão | karaf |
 |**-pw**| Password     | Define a senha de conexão do broker | karaf |
-<!--|**-to**| Timeout | Define o tempo inicial de espera para confirmação do broker | 10.000 ms|
-|**-ps**| Persistência | Define se o dispositivo deve persistir em arquivo as amostras coletadas | true |-->
+<!--|**-to**| Timeout | Define o tempo inicial de espera para confirmação do broker | 10.000 ms|-->
+|**-ps**| Persistência | Define se o dispositivo deve persistir em arquivo as amostras coletadas | true |
 
   > Atenção: Não pode haver 2 dispositivos com o mesmo device ID em um mesmo broker.
 
