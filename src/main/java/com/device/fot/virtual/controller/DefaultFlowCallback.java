@@ -60,9 +60,9 @@ public class DefaultFlowCallback implements MqttCallback {
                 break;
             case SET:
                 if (tatuMessage.getTarget().equalsIgnoreCase("brokerMqtt") && !this.device.isUpdating()) {
-                    String newMessage = tatuMessage.getMessageContent();
+                    var newMessage = tatuMessage.getMessageContent();
 
-                    JSONObject newBrokerSettingsJson = new JSONObject(newMessage);
+                    var newBrokerSettingsJson = new JSONObject(newMessage);
 
                     BrokerSettings newBrokerSettings = BrokerSettingsBuilder.builder()
                             .deviceId(newBrokerSettingsJson.getString("id"))
@@ -72,7 +72,7 @@ public class DefaultFlowCallback implements MqttCallback {
                             .setPassword(newBrokerSettingsJson.getString("password"))
                             .build();
 
-                    this.brokerUpdateController.startUpdateBroker(newBrokerSettings, 10.000);
+                    this.brokerUpdateController.startUpdateBroker(newBrokerSettings, 10.000, false);
                 } else {
                     System.out.println("The device is updating: " + this.device.isUpdating());
                 }
@@ -98,7 +98,6 @@ public class DefaultFlowCallback implements MqttCallback {
 
     @Override
     public void connectionLost(Throwable cause) {
-//        System.out.println("Conexão caiu");
         Logger.getLogger(DefaultFlowCallback.class.getName()).log(Level.SEVERE, null, cause);
     }
 }
