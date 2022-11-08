@@ -1,10 +1,5 @@
 package com.device.fot.virtual.controller;
 
-import com.device.fot.virtual.model.BrokerSettings;
-import com.device.fot.virtual.model.FoTDevice;
-import extended.tatu.wrapper.enums.ExtendedTATUMethods;
-import extended.tatu.wrapper.model.TATUMessage;
-import extended.tatu.wrapper.util.ExtendedTATUWrapper;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -12,6 +7,13 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONObject;
+
+import com.device.fot.virtual.model.BrokerSettings;
+import com.device.fot.virtual.model.FoTDevice;
+
+import extended.tatu.wrapper.enums.ExtendedTATUMethods;
+import extended.tatu.wrapper.model.TATUMessage;
+import extended.tatu.wrapper.util.ExtendedTATUWrapper;
 
 /**
  *
@@ -29,6 +31,7 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
     public void startUpdateBroker(BrokerSettings brokerSettings, double timeout, boolean retryConnect) {
         if (this.device.isUpdating()) {
+            System.out.println("Device já está atualizando.");
             return;
         }
 
@@ -68,15 +71,16 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         String message = new String(mqttMessage.getPayload());
         TATUMessage tatuMessage = new TATUMessage(message);
-        if (tatuMessage.isResponse() && tatuMessage.getMethod().equals(ExtendedTATUMethods.CONNACK)) {
-            this.timeoutCounter.interrupt();
-            var json = new JSONObject(tatuMessage.getMessageContent());
-            if (json.getJSONObject("BODY").getBoolean("CAN_CONNECT")) {
-                this.device.updateBrokerSettings(brokerSettings);
-                this.brokerSettings.getClient().unsubscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
-            } else {
-                this.brokerSettings.disconnectClient();
-            }
+        if (!tatuMessage.isResponse() || !tatuMessage.getMethod().equals(ExtendedTATUMethods.CONNACK)) {
+            return;
+        }
+        this.timeoutCounter.interrupt();
+        var json = new JSONObject(tatuMessage.getMessageContent());
+        if (json.getJSONObject("BODY").getBoolean("CAN_CONNECT")) {
+            this.device.updateBrokerSettings(brokerSettings);
+            this.brokerSettings.getClient().unsubscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
+        } else {
+            this.brokerSettings.disconnectClient();
         }
     }
 
@@ -100,9 +104,18 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
         boolean connected = false;
         do {
             try {
+                System.out.println("Conectando ao broker...");
                 client.connect(options);
                 connected = true;
             } catch (MqttException e) {
+                System.out.println("Falha ao conectar ao broker.");
+                if (!retryConnect) {
+                    return;
+                }
+                try {
+                    Thread.sleep(1000L);
+                } catch (InterruptedException ex) {
+                }
             }
         } while (!connected && retryConnect);
     }

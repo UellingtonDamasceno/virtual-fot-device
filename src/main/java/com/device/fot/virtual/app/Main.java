@@ -75,7 +75,7 @@ public class Main {
             FoTDevice device = new FoTDevice(deviceId, sensors);
             BrokerUpdateCallback callback = new BrokerUpdateCallback(device);
             callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout), true);
-            
+
         } catch (IOException ex) {
             System.err.println("Sorry, unable to find sensors.json or not create pesistence file.");
         }
