@@ -15,7 +15,6 @@ RUN cd virtual-fot-device-latest\
 	&& cd ..\
 	&& rm -r -f virtual-fot-device-latest
 
-
 FROM openjdk:11.0.16-jre-slim
 WORKDIR /opt
 LABEL maintainder="UDamasceno <udamasceno@ecomp.uefs.br>"
