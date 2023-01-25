@@ -1,8 +1,6 @@
 name: Publish Maven Package
 
-on:
-  release:
-    types: [created]
+on: push
 
 jobs:
   build:
