@@ -9,6 +9,6 @@ RUN mvn -Pnative -DskipTests package \
 FROM ubuntu:bionic
 WORKDIR /opt
 LABEL maintainder="UDamasceno <udamasceno@ecomp.uefs.br>"
-COPY --from=builder /opt/virtual-fot-device /opt/device
+COPY --from=builder /opt/target/virtual-fot-device /opt/device
 ENTRYPOINT ["./device"]
 
