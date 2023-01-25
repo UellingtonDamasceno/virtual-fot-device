@@ -3,7 +3,10 @@ WORKDIR /opt
 COPY . .
 RUN mvn -Pnative -DskipTests package \
 	&& ls \
-	&& mv target/Virtual-FoT-Device ../virtual-fot-device 
+	&& cd target \
+	&& ls \
+	&& cd .. \
+	&& mv target/virtual-fot-device ../virtual-fot-device 
 
 FROM ubuntu:bionic
 WORKDIR /opt
