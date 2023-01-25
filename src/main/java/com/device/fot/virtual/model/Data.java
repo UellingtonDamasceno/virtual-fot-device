@@ -47,7 +47,8 @@ public class Data<T> {
 
     @Override
     public String toString() {
-        return new StringBuilder().append(timestamp).append(",")
+        return new StringBuilder()
+                .append(timestamp).append(",")
                 .append(deviceId).append(",")
                 .append(sensorId).append(",")
                 .append(valuesToString())
