@@ -11,6 +11,13 @@
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
     <name>Virtual-FoT-Device</name>
+    <distributionManagement>
+      <repository>
+        <id>github</id>
+        <name>virtual-fot-device</name>
+        <url>https://maven.pkg.github.com/UellingtonDamasceno/virtual-fot-device</url>
+      </repository>
+    </distributionManagement>
     <dependencies>
         <dependency>
             <groupId>org.eclipse.paho</groupId>
