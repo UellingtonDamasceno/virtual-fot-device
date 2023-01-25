@@ -2,7 +2,7 @@ FROM vegardit/graalvm-maven:latest-java17 AS builder
 WORKDIR /opt
 COPY . .
 RUN mvn -Pnative -DskipTests package \
-	&& mv target/virtual-fot-device ../virtual-fot-device \
+	&& mv target/virtual-fot-device ../virtual-fot-device
 	
 FROM ubuntu:bionic
 WORKDIR /opt
