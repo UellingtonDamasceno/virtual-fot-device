@@ -19,4 +19,7 @@ FROM ubuntu:bionic
 WORKDIR /opt
 LABEL maintainder="UDamasceno <udamasceno@ecomp.uefs.br>"
 COPY --from=builder /opt/virtual-fot-device /opt/device
+RUN apt-get update -y && apt-get autoremove -y\
+	&& apt-get install --no-install-recommends net-tools -y\
+	&& wget
 ENTRYPOINT ["./device"]
