@@ -14,6 +14,8 @@ import com.device.fot.virtual.model.FoTDevice;
 import extended.tatu.wrapper.enums.ExtendedTATUMethods;
 import extended.tatu.wrapper.model.TATUMessage;
 import extended.tatu.wrapper.util.ExtendedTATUWrapper;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  *
@@ -24,9 +26,11 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
     private FoTDevice device;
     private BrokerSettings brokerSettings;
     private Thread timeoutCounter;
+    private String ip;
 
     public BrokerUpdateCallback(FoTDevice device) {
         this.device = device;
+        this.ip = this.getIpAddress();
     }
 
     public void startUpdateBroker(BrokerSettings brokerSettings, double timeout, boolean retryConnect) {
@@ -38,7 +42,7 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
         this.device.setIsUpdating(true);
         MqttConnectOptions newOptions = brokerSettings.getConnectionOptions();
         String connectionTopic = ExtendedTATUWrapper.getConnectionTopic();
-        String message = ExtendedTATUWrapper.buildConnectMessage(device, timeout);
+        String message = ExtendedTATUWrapper.buildConnectMessage(device, ip, timeout);
         this.timeoutCounter = new Thread(this);
         this.timeoutCounter.setName("BROKER/UPDATE/TIMEOUT");
 
@@ -118,5 +122,14 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
                 }
             }
         } while (!connected && retryConnect);
+    }
+    
+    public final String getIpAddress() {
+        try {
+            InetAddress localhost = InetAddress.getLocalHost();
+            return localhost.getHostAddress();
+        } catch (UnknownHostException e) {
+            return "UNKNOWN_HOST";
+        }
     }
 }

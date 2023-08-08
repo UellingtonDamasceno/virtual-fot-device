@@ -1,15 +1,16 @@
 package com.device.fot.virtual.model;
 
-import com.device.fot.virtual.controller.DataController;
-import extended.tatu.wrapper.model.Sensor;
-import extended.tatu.wrapper.util.TATUWrapper;
-import static extended.tatu.wrapper.util.TATUWrapper.buildFlowMessageResponse;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Random;
+
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+
+import com.device.fot.virtual.controller.DataController;
+
+import extended.tatu.wrapper.model.Sensor;
+import extended.tatu.wrapper.util.TATUWrapper;
 
 /**
  *
@@ -23,23 +24,36 @@ public class FoTSensor extends Sensor implements Runnable {
     private Thread thread;
     private MqttClient publisher;
 
+    private int minValue, maxValue;
+    private String flowThreadName;
+
     public FoTSensor(String deviceId, Sensor sensor) {
         this(deviceId,
                 sensor.getId(),
                 sensor.getType(),
                 sensor.getCollectionTime(),
-                sensor.getPublishingTime());
+                sensor.getPublishingTime(),
+                11,
+                30);
     }
 
     public FoTSensor(String deviceId,
             String sensorName,
             String type,
             int publishingTime,
-            int collectionTime) {
+            int collectionTime, int minValue, int maxValue) {
+
         super(sensorName, type, collectionTime, publishingTime);
+
         this.deviceId = deviceId;
         this.flow = false;
         this.running = false;
+        if (minValue > maxValue) {
+            throw new IllegalArgumentException("O valor mínimo não pode ser maior que o valor máximo.");
+        }
+        this.minValue = minValue;
+        this.maxValue = maxValue;
+        this.flowThreadName = this.buildFlowThreadName(deviceId, id);
     }
 
     public String deviceId() {
@@ -62,18 +76,18 @@ public class FoTSensor extends Sensor implements Runnable {
     public void setPublishingTime(int publishingTime) {
         if (publishingTime >= 1) {
             this.publishingTime = publishingTime;
-        } else {
-            this.stopFlow();
+            return;
         }
+        this.stopFlow();
     }
 
     @Override
     public void setCollectionTime(int collectionTime) {
         if (collectionTime >= 1) {
             this.collectionTime = collectionTime;
-        } else {
-            this.stopFlow();
+            return;
         }
+        this.stopFlow();
     }
 
     public void startFlow() {
@@ -86,13 +100,13 @@ public class FoTSensor extends Sensor implements Runnable {
             this.publishingTime = newFlowPublish;
             if (thread == null || !thread.isAlive()) {
                 this.thread = new Thread(this);
-                this.thread.setName("FLOW/" + deviceId + "/" + id);
+                this.thread.setName(flowThreadName);
                 this.thread.start();
             }
-        } else {
-            if (this.running && this.flow) {
-                this.stopFlow();
-            }
+            return;
+        }
+        if (this.running && this.flow) {
+            this.stopFlow();
         }
     }
 
@@ -116,19 +130,19 @@ public class FoTSensor extends Sensor implements Runnable {
     }
 
     public Integer getCurrentValue() {
-        return new Random().nextInt(11) + 30;
+        return new Random().nextInt(minValue) + maxValue;
     }
 
     private Data<Integer> getDataFlow() throws InterruptedException {
-        Random drawer = new Random();
+        var drawer = new Random();
+        var values = new LinkedList<Integer>();
         int tempPublish = this.publishingTime;
-        List<Integer> values = new LinkedList();
         while (tempPublish >= 0) {
-            values.add(drawer.nextInt(11) + 30);
+            values.add(drawer.nextInt(minValue) + maxValue);
             tempPublish -= this.collectionTime;
             Thread.sleep(this.collectionTime);
         }
-        return new Data(this.deviceId, this.id, values);
+        return new Data<Integer>(this.deviceId, this.id, values);
     }
 
     @Override
@@ -139,8 +153,9 @@ public class FoTSensor extends Sensor implements Runnable {
         this.running = true;
         while (thread.isAlive() && this.running && this.flow) {
             try {
-                Data data = this.getDataFlow();
-                msg = buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime, data.getValues().toArray());
+                var data = this.getDataFlow();
+                msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime,
+                        data.getValues().toArray());
                 this.publisher.publish(topic, new MqttMessage(msg.getBytes()));
                 DataController.put(data);
             } catch (InterruptedException | MqttException ex) {
@@ -148,5 +163,11 @@ public class FoTSensor extends Sensor implements Runnable {
             }
         }
         this.running = false;
+    }
+
+    private String buildFlowThreadName(String deviceId, String id) {
+        return new StringBuilder("FLOW/")
+                .append(deviceId).append("/")
+                .append(id).toString();
     }
 }

@@ -1,19 +1,21 @@
 package com.device.fot.virtual.controller;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.json.JSONObject;
+
 import com.device.fot.virtual.model.BrokerSettings;
 import com.device.fot.virtual.model.BrokerSettingsBuilder;
 import com.device.fot.virtual.model.FoTDevice;
 import com.device.fot.virtual.model.FoTSensor;
 import com.device.fot.virtual.model.NullFoTSensor;
-import static extended.tatu.wrapper.enums.ExtendedTATUMethods.*;
+
 import extended.tatu.wrapper.model.TATUMessage;
 import extended.tatu.wrapper.util.TATUWrapper;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.json.JSONObject;
 
 /**
  *

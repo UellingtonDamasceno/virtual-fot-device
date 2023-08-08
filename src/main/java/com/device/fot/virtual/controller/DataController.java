@@ -1,6 +1,5 @@
 package com.device.fot.virtual.controller;
 
-import com.device.fot.virtual.model.Data;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +10,8 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.device.fot.virtual.model.Data;
 
 /**
  *
@@ -25,7 +26,7 @@ public class DataController implements Runnable {
     private static boolean running = false, canSaveData = false;
     private Thread thread;
 
-    private static final LinkedBlockingQueue<Data> BUFFER = new LinkedBlockingQueue();
+    private static final LinkedBlockingQueue<Data> BUFFER = new LinkedBlockingQueue<Data>();
 
     private DataController() {
         this("data.csv", 256);
@@ -85,7 +86,7 @@ public class DataController implements Runnable {
     @Override
     public void run() {
         DataController.running = true;
-        List<String> lines = new ArrayList(this.bufferSize);
+        var lines = new ArrayList<String>(this.bufferSize);
         while (running) {
             try {
                 lines.add(BUFFER.take().toString());
