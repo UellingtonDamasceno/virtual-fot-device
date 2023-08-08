@@ -81,7 +81,10 @@ e são respondidas no tópico ``dev/CONNECTIONS/RES``.
 
     CONNECT VALUE BROKER 
     {
-       "HEADER":{"NAME":"String"},
+       "HEADER":{
+                 "NAME":"String",
+                 "SOURCE_IP": "String"
+                 },
        "DEVICE":{
                   "id":"String",
                   "sensors":Sensor[],
