@@ -4,6 +4,7 @@ COPY . .
 RUN mvn -Pnative -DskipTests package && ls
 	
 FROM ubuntu:bionic
+RUN apt-get update && apt-get upgrade
 LABEL maintainder="UDamasceno <udamasceno@ecomp.uefs.br>"
 COPY --from=build /opt/target/virtual-fot-device virtual-fot-device
 ENTRYPOINT ["./virtual-fot-device"]
