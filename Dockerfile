@@ -3,7 +3,7 @@ WORKDIR /opt
 COPY . .
 RUN mvn -Pnative -DskipTests package && ls
 	
-FROM ubuntu:bionic
+FROM ubuntu:23.04
 RUN apt-get update -y && apt-get upgrade -y && apt-get autoremove -y\ 
     && apt-get install net-tools -y\
 	&& apt-get install iproute2 -y\
