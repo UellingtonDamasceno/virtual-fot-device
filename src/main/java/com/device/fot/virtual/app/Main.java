@@ -14,7 +14,8 @@ import java.util.UUID;
 import org.json.JSONArray;
 
 import com.device.fot.virtual.controller.BrokerUpdateCallback;
-import com.device.fot.virtual.controller.DataController;
+import com.device.fot.virtual.controller.LatencyLogController;
+import com.device.fot.virtual.controller.MessageLogController;
 import com.device.fot.virtual.model.BrokerSettings;
 import com.device.fot.virtual.model.BrokerSettingsBuilder;
 import com.device.fot.virtual.model.FoTDevice;
@@ -30,72 +31,76 @@ import extended.tatu.wrapper.util.SensorWrapper;
  */
 public class Main {
 
-        public static void main(String[] args) {
-                try (InputStream input = Main.class.getResourceAsStream("broker.properties")) {
-                        if (input == null) {
-                                System.err.println("Sorry, unable to find config.properties.");
-                                return;
-                        }
-                        Properties props = new Properties();
-                        props.load(input);
-                        String deviceId = CLI.getDeviceId(args)
-                                        .orElse(UUID.randomUUID().toString());
+    public static void main(String[] args) {
+        try (InputStream input = Main.class.getResourceAsStream("broker.properties")) {
+            if (input == null) {
+                System.err.println("Sorry, unable to find config.properties.");
+                return;
+            }
+            Properties props = new Properties();
+            props.load(input);
+            String deviceId = CLI.getDeviceId(args)
+                    .orElse(UUID.randomUUID().toString());
 
-                        String brokerIp = CLI.getBrokerIp(args)
-                                        .orElse(props.getProperty("brokerIp"));
+            String brokerIp = CLI.getBrokerIp(args)
+                    .orElse(props.getProperty("brokerIp"));
 
-                        String port = CLI.getPort(args)
-                                        .orElse(props.getProperty("port"));
+            String port = CLI.getPort(args)
+                    .orElse(props.getProperty("port"));
 
-                        String password = CLI.getPassword(args)
-                                        .orElse(props.getProperty("password"));
+            String password = CLI.getPassword(args)
+                    .orElse(props.getProperty("password"));
 
-                        String user = CLI.getUsername(args)
-                                        .orElse(props.getProperty("username"));
+            String user = CLI.getUsername(args)
+                    .orElse(props.getProperty("username"));
 
-                        String timeout = CLI.getTimeout(args)
-                                        .orElse("10000");
+            String timeout = CLI.getTimeout(args)
+                    .orElse("10000");
 
-                        BrokerSettings brokerSettings = BrokerSettingsBuilder
-                                        .builder()
-                                        .setBrokerIp(brokerIp)
-                                        .setPort(port)
-                                        .setPassword(password)
-                                        .setUsername(user)
-                                        .deviceId(deviceId)
-                                        .build();
+            BrokerSettings brokerSettings = BrokerSettingsBuilder
+                    .builder()
+                    .setBrokerIp(brokerIp)
+                    .setPort(port)
+                    .setPassword(password)
+                    .setUsername(user)
+                    .deviceId(deviceId)
+                    .build();
 
-                        if (CLI.hasParam("-ps", args)) {
-                                DataController.getInstance().createAndSetDataFile(deviceId + ".csv");
-                                DataController.getInstance().start();
-                                DataController.getInstance().setCanSaveData(true);
-                        }
+            if (CLI.hasParam("-ps", args)) {
+                MessageLogController.getInstance().createAndUpdateFileName(deviceId + "_messages_log.csv");
+                MessageLogController.getInstance().start();
+                MessageLogController.getInstance().setCanSaveData(true);
+            }
+            
+            if(CLI.hasParam("-ll", args)){
+                LatencyLogController.getInstance().createAndUpdateFileName(deviceId + "_latency_log.csv");
+                LatencyLogController.getInstance().start();
+                LatencyLogController.getInstance().setCanSaveData(true);
+            }
 
-                        List<Sensor> sensors = readSensors("sensors.json", deviceId)
-                                        .stream()
-                                        .map(Sensor.class::cast)
-                                        .collect(toList());
+            List<Sensor> sensors = readSensors("sensors.json", deviceId)
+                    .stream()
+                    .map(Sensor.class::cast)
+                    .collect(toList());
 
-                        FoTDevice device = new FoTDevice(deviceId, sensors);
-                        BrokerUpdateCallback callback = new BrokerUpdateCallback(device);
-                        callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout), true);
+            FoTDevice device = new FoTDevice(deviceId, sensors);
+            BrokerUpdateCallback callback = new BrokerUpdateCallback(device);
+            callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout), true);
 
-                } catch (IOException ex) {
-                        System.err.println("Sorry, unable to find sensors.json or not create pesistence file.");
-                }
+        } catch (IOException ex) {
+            System.err.println("Sorry, unable to find sensors.json or not create pesistence file.");
         }
+    }
 
-        private static List<FoTSensor> readSensors(String fileName, String deviceName) throws IOException {
-                try (var inputStream = Main.class.getResourceAsStream(fileName);
-                                var inputReader = new InputStreamReader(inputStream);
-                                var bufferedReader = new BufferedReader(inputReader)) {
+    private static List<FoTSensor> readSensors(String fileName, String deviceName) throws IOException {
+        try (var inputStream = Main.class.getResourceAsStream(fileName); var inputReader = new InputStreamReader(inputStream); var bufferedReader = new BufferedReader(inputReader)) {
 
-                        String textFile = bufferedReader.lines().collect(joining());
-                        JSONArray sensorsArray = new JSONArray(textFile);
-                        return SensorWrapper.getAllSensors(sensorsArray)
-                                        .stream()
-                                        .map(sensor -> new FoTSensor(deviceName, sensor))
-                                        .collect(toList());
-                }
+            String textFile = bufferedReader.lines().collect(joining());
+            JSONArray sensorsArray = new JSONArray(textFile);
+            return SensorWrapper.getAllSensors(sensorsArray)
+                    .stream()
+                    .map(sensor -> new FoTSensor(deviceName, sensor))
+                    .collect(toList());
         }
+    }
 }

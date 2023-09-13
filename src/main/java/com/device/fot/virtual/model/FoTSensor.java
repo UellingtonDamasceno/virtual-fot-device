@@ -1,5 +1,7 @@
 package com.device.fot.virtual.model;
 
+
+import com.device.fot.virtual.controller.MessageLogController;
 import java.util.LinkedList;
 import java.util.Random;
 
@@ -7,7 +9,6 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
-import com.device.fot.virtual.controller.DataController;
 
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
@@ -157,7 +158,7 @@ public class FoTSensor extends Sensor implements Runnable {
                 msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime,
                         data.getValues().toArray());
                 this.publisher.publish(topic, new MqttMessage(msg.getBytes()));
-                DataController.put(data);
+            MessageLogController.getInstance().putData(data);
             } catch (InterruptedException | MqttException ex) {
                 this.running = false;
             }
