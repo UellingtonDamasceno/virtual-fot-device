@@ -54,6 +54,7 @@ public abstract class PersistenceController<T> implements Runnable {
             lines.forEach(line -> {
                 try {
                     w.write(line);
+                    System.out.println(this.fileName + "::" + line);
                     w.newLine();
                 } catch (IOException ex) {
                     Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);

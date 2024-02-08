@@ -1,5 +1,6 @@
 package com.device.fot.virtual.model;
 
+import com.device.fot.virtual.controller.LatencyLogController;
 import com.device.fot.virtual.controller.MessageLogController;
 import java.util.LinkedList;
 import java.util.Random;
@@ -10,6 +11,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -25,8 +27,10 @@ public class FoTSensor extends Sensor implements Runnable {
 
     private String flowThreadName;
     private Random random;
-    
+
     private int lastValue;
+
+    private final static AtomicInteger messageId = new AtomicInteger(0);
 
     public FoTSensor(String deviceId, Sensor sensor) {
         this(deviceId,
@@ -97,6 +101,7 @@ public class FoTSensor extends Sensor implements Runnable {
             this.collectionTime = newFlowCollect;
             this.publishingTime = newFlowPublish;
             if (thread == null || !thread.isAlive()) {
+                System.out.println("Sensor type: " + type + " starting flow.");
                 this.thread = new Thread(this);
                 this.thread.setName(flowThreadName);
                 this.thread.start();
@@ -150,12 +155,17 @@ public class FoTSensor extends Sensor implements Runnable {
         String topic = TATUWrapper.buildTATUResponseTopic(deviceId);
         this.flow = true;
         this.running = true;
+        MqttMessage mqttMessage;
         while (thread.isAlive() && this.running && this.flow) {
             try {
                 var data = this.getDataFlow();
                 msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime,
                         data.getValues().toArray());
-                this.publisher.publish(topic, new MqttMessage(msg.getBytes()));
+                mqttMessage = new MqttMessage(msg.getBytes());
+                mqttMessage.setId(messageId.getAndIncrement());
+                mqttMessage.setQos(2);
+                LatencyLogController.getInstance().putNewMessage(mqttMessage.getId(), msg);
+                this.publisher.publish(topic, mqttMessage);
                 MessageLogController.getInstance().putData(data);
             } catch (InterruptedException | MqttException ex) {
                 this.running = false;
@@ -181,5 +191,5 @@ public class FoTSensor extends Sensor implements Runnable {
         sb.append('}');
         return sb.toString();
     }
-    
+
 }

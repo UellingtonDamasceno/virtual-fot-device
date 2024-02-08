@@ -72,11 +72,11 @@ public class Main {
                 MessageLogController.getInstance().setCanSaveData(true);
             }
             
-            if(CLI.hasParam("-ll", args)){
+            //if(CLI.hasParam("-ll", args)){
                 LatencyLogController.getInstance().createAndUpdateFileName(deviceId + "_latency_log.csv");
                 LatencyLogController.getInstance().start();
                 LatencyLogController.getInstance().setCanSaveData(true);
-            }
+           // }
 
             List<Sensor> sensors = readSensors("sensors.json", deviceId)
                     .stream()

@@ -3,25 +3,44 @@ package com.device.fot.virtual.controller;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import org.json.JSONObject;
 
 public class LatencyLogController extends PersistenceController<Long> {
 
-    private static LatencyLogController latencyLogController = new LatencyLogController();
+    private static final LatencyLogController latencyLogController = new LatencyLogController();
 
-    private static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss.SSS");
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+    private final Map<Integer, String> messages;
 
     private LatencyLogController() {
         super("latency_log.csv");
+        this.messages = new HashMap<>();
     }
 
     public synchronized static LatencyLogController getInstance() {
         return latencyLogController;
     }
 
-    public void putLatency(Long latency) throws InterruptedException {
-        if (canSaveData) {
-            buffer.put(latency);
+    public void putNewMessage(int id, String message) {
+        this.messages.put(id, message);
+    }
+
+    public void calculateLatancy(int messageId) {
+        if (!this.messages.containsKey(messageId)) {
+            System.out.println("Não tem mensagem id: "+messageId);
+            return;
         }
+        String messageContent = this.messages.remove(messageId);
+        long customTimestamp = new JSONObject(messageContent).getJSONObject("HEADER").getLong("TIMESTAMP");
+        
+        if (customTimestamp <= 0) {
+            System.out.println("The message" + messageContent + " don't have timestamp");
+        }
+
+        long latency = System.currentTimeMillis() - customTimestamp;
+        this.buffer.add(latency);
     }
 
     private String buildLogLatencyLine(Long latency) {
