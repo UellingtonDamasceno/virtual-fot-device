@@ -99,7 +99,7 @@ public class DefaultFlowCallback implements MqttCallback {
         MqttMessage deliveredMessage;
         try {
             deliveredMessage = imdt.getMessage();
-            if(deliveredMessage.getPayload().length == 0){
+            if(deliveredMessage == null || deliveredMessage.getPayload().length == 0){
                 return;
             }
             String messageContent = new String(deliveredMessage.getPayload());
