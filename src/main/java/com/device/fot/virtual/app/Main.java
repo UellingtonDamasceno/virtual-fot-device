@@ -67,13 +67,13 @@ public class Main {
                     .build();
 
             if (CLI.hasParam("-ps", args)) {
-                MessageLogController.getInstance().createAndUpdateFileName(deviceId + "_messages_log.csv");
+                MessageLogController.getInstance().createAndUpdateFileName(deviceId + "ml.csv");
                 MessageLogController.getInstance().start();
                 MessageLogController.getInstance().setCanSaveData(true);
             }
             
             //if(CLI.hasParam("-ll", args)){
-                LatencyLogController.getInstance().createAndUpdateFileName(deviceId + "_latency_log.csv");
+                LatencyLogController.getInstance().createAndUpdateFileName(deviceId + "ll.csv");
                 LatencyLogController.getInstance().start();
                 LatencyLogController.getInstance().setCanSaveData(true);
            // }

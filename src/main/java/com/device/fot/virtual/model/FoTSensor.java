@@ -54,7 +54,7 @@ public class FoTSensor extends Sensor implements Runnable {
         this.flow = false;
         this.running = false;
         this.random = new Random();
-        this.lastValue = (minValue <= 0 && maxValue <= 0) ? 0 : random.nextInt(minValue, maxValue);
+        this.lastValue = (minValue <= 0 && maxValue <= 0) ? 0 : (maxValue - minValue) + minValue;
         this.flowThreadName = this.buildFlowThreadName(deviceId, id);
     }
 
