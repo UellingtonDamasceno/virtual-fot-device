@@ -13,10 +13,8 @@ import com.device.fot.virtual.model.NullFoTSensor;
 
 import extended.tatu.wrapper.model.TATUMessage;
 import extended.tatu.wrapper.util.TATUWrapper;
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.eclipse.paho.client.mqttv3.MqttException;
 
 /**
  *

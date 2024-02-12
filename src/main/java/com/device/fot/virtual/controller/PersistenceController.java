@@ -21,7 +21,9 @@ public abstract class PersistenceController<T> implements Runnable {
     protected Thread thread;
     protected String fileName;
     protected LinkedBlockingQueue<T> buffer = new LinkedBlockingQueue<>();
-
+    protected StandardOpenOption fileOpenOption;
+    private static final Logger logger = Logger.getLogger(PersistenceController.class.getName());
+    
     protected PersistenceController(String fileName) {
         this.fileName = fileName;
     }
@@ -41,26 +43,41 @@ public abstract class PersistenceController<T> implements Runnable {
         this.canSaveData = canSaveData;
     }
 
-    public void createAndUpdateFileName(String fileName) throws IOException {
-        File file = new File(fileName);
+   public void createAndUpdateFileName(String fileName) throws IOException {
+        File expDirectory = new File("exp");
+
+        if (!expDirectory.exists()) {
+            expDirectory.mkdir();
+            logger.info("Diretório 'exp' criado.");
+        }
+
+        File file = new File(expDirectory, fileName);
+
         if (!file.exists()) {
             file.createNewFile();
+            this.fileOpenOption = StandardOpenOption.WRITE;
+            logger.log(Level.INFO, "Arquivo criado: {0}", file.getAbsolutePath());
+        } else {
+            this.fileOpenOption = StandardOpenOption.APPEND;
+            logger.log(Level.INFO, "O arquivo j\u00e1 existe: {0}", file.getAbsolutePath());
         }
-        this.fileName = fileName;
+
+        this.fileName = file.getAbsolutePath();
     }
 
     protected void write(List<String> lines) {
-        try (var w = Files.newBufferedWriter(Path.of(this.fileName), StandardOpenOption.WRITE)) {
+        try (var w = Files.newBufferedWriter(Path.of(this.fileName), this.fileOpenOption)) {
             lines.forEach(line -> {
                 try {
                     w.write(line);
                     w.newLine();
+                    logger.info(line);
                 } catch (IOException ex) {
-                    Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);
+                    logger.log(Level.SEVERE, null, ex);
                 }
             });
         } catch (IOException ex) {
-            Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);
+           logger.log(Level.SEVERE, null, ex);
         }
     }
 

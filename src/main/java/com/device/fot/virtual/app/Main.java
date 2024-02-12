@@ -5,17 +5,15 @@ import static java.util.stream.Collectors.toList;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
-import java.util.Properties;
-import java.util.UUID;
 
 import org.json.JSONArray;
 
 import com.device.fot.virtual.controller.BrokerUpdateCallback;
 import com.device.fot.virtual.controller.LatencyLogController;
 import com.device.fot.virtual.controller.MessageLogController;
+import com.device.fot.virtual.controller.configs.DeviceConfig;
 import com.device.fot.virtual.model.BrokerSettings;
 import com.device.fot.virtual.model.BrokerSettingsBuilder;
 import com.device.fot.virtual.model.FoTDevice;
@@ -24,35 +22,35 @@ import com.device.fot.virtual.util.CLI;
 
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.SensorWrapper;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Uellington Damasceno
  */
 public class Main {
+    private static final Logger logger = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
-        try (InputStream input = Main.class.getResourceAsStream("broker.properties")) {
-            if (input == null) {
-                System.err.println("Sorry, unable to find config.properties.");
-                return;
-            }
-            Properties props = new Properties();
-            props.load(input);
+        try {
+
+            DeviceConfig config = DeviceConfig.load();
+            
             String deviceId = CLI.getDeviceId(args)
-                    .orElse(UUID.randomUUID().toString());
+                    .orElse(config.getDeviceId());
 
             String brokerIp = CLI.getBrokerIp(args)
-                    .orElse(props.getProperty("brokerIp"));
+                    .orElse(config.getBrokerIp());
 
             String port = CLI.getPort(args)
-                    .orElse(props.getProperty("port"));
+                    .orElse(config.getPort());
 
             String password = CLI.getPassword(args)
-                    .orElse(props.getProperty("password"));
+                    .orElse(config.getPassword());
 
             String user = CLI.getUsername(args)
-                    .orElse(props.getProperty("username"));
+                    .orElse(config.getUsername());
 
             String timeout = CLI.getTimeout(args)
                     .orElse("10000");
@@ -65,18 +63,18 @@ public class Main {
                     .setUsername(user)
                     .deviceId(deviceId)
                     .build();
-
+            logger.info(brokerSettings.toString());
             if (CLI.hasParam("-ps", args)) {
                 MessageLogController.getInstance().createAndUpdateFileName(deviceId + "ml.csv");
                 MessageLogController.getInstance().start();
                 MessageLogController.getInstance().setCanSaveData(true);
             }
             
-            //if(CLI.hasParam("-ll", args)){
-                LatencyLogController.getInstance().createAndUpdateFileName(deviceId + "ll.csv");
-                LatencyLogController.getInstance().start();
-                LatencyLogController.getInstance().setCanSaveData(true);
-           // }
+
+            LatencyLogController.getInstance().createAndUpdateFileName(deviceId +"_"+config.getExpNum() +"_ll.csv");
+            LatencyLogController.getInstance().start();
+            LatencyLogController.getInstance().setCanSaveData(true);
+
 
             List<Sensor> sensors = readSensors("sensors.json", deviceId)
                     .stream()
@@ -88,7 +86,7 @@ public class Main {
             callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout), true);
 
         } catch (IOException ex) {
-            System.err.println("Sorry, unable to find sensors.json or not create pesistence file.");
+            logger.log(Level.WARNING, "Sorry, unable to find sensors.json or not create pesistence file.");
         }
     }
 
