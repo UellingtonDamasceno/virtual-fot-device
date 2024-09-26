@@ -37,8 +37,6 @@ public class DefaultFlowCallback implements MqttCallback {
         FoTSensor sensor;
 
         System.out.println("MQTT_MESSAGE: " + new String(mqttMessage.getPayload()));
-        System.out.println("MESSAGE ID: "+ mqttMessage.getId());
-        System.out.println("TOPIC: " + topic);
         System.out.println("MY_MESSAGE: " + tatuMessage);
 
         switch (tatuMessage.getMethod()) {
@@ -88,13 +86,13 @@ public class DefaultFlowCallback implements MqttCallback {
             default:
                 throw new AssertionError(tatuMessage.getMethod().name());
         }
-        System.out.println("============================");
 
     }
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken imdt) {
-        LatencyLogController.getInstance().calculateLatancy(imdt.getResponse().getMessageId() - 5);
+        this.device.calculateLatency(imdt.getResponse().getMessageId() - 5);
+//        LatencyLogController.getInstance().calculateLatancy(imdt.getResponse().getMessageId() - 5);
     }
 
     @Override

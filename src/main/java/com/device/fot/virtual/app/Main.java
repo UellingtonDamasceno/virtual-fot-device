@@ -1,5 +1,6 @@
 package com.device.fot.virtual.app;
 
+import com.device.fot.virtual.api.LatencyLoggerApiClient;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -11,9 +12,11 @@ import java.util.List;
 import org.json.JSONArray;
 
 import com.device.fot.virtual.controller.BrokerUpdateCallback;
+import com.device.fot.virtual.controller.LatencyApiController;
 import com.device.fot.virtual.controller.LatencyLogController;
 import com.device.fot.virtual.controller.MessageLogController;
 import com.device.fot.virtual.controller.configs.DeviceConfig;
+import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import com.device.fot.virtual.model.BrokerSettings;
 import com.device.fot.virtual.model.BrokerSettingsBuilder;
 import com.device.fot.virtual.model.FoTDevice;
@@ -30,13 +33,14 @@ import java.util.logging.Logger;
  * @author Uellington Damasceno
  */
 public class Main {
+
     private static final Logger logger = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
         try {
 
             DeviceConfig config = DeviceConfig.load();
-            
+
             String deviceId = CLI.getDeviceId(args)
                     .orElse(config.getDeviceId());
 
@@ -63,25 +67,29 @@ public class Main {
                     .setUsername(user)
                     .deviceId(deviceId)
                     .build();
+
             logger.info(brokerSettings.toString());
+
             if (CLI.hasParam("-ps", args)) {
                 MessageLogController.getInstance().createAndUpdateFileName(deviceId + "ml.csv");
                 MessageLogController.getInstance().start();
                 MessageLogController.getInstance().setCanSaveData(true);
             }
-            
 
-            LatencyLogController.getInstance().createAndUpdateFileName(deviceId +"_"+config.getExpNum() +"_ll.csv");
-            LatencyLogController.getInstance().start();
-            LatencyLogController.getInstance().setCanSaveData(true);
+            if (CLI.hasParam("-ll", args)) {
+                LatencyLogController.getInstance().createAndUpdateFileName(deviceId + "_" + config.getExpNum() + "_ll.csv");
+                LatencyLogController.getInstance().start();
+                LatencyLogController.getInstance().setCanSaveData(true);
+            }
 
+            LatencyApiController latencyLoggerController = setupLatencyLoggerApiController(deviceId, brokerIp);
 
             List<Sensor> sensors = readSensors("sensors.json", deviceId)
                     .stream()
                     .map(Sensor.class::cast)
                     .collect(toList());
 
-            FoTDevice device = new FoTDevice(deviceId, sensors);
+            FoTDevice device = new FoTDevice(deviceId, sensors, latencyLoggerController);
             BrokerUpdateCallback callback = new BrokerUpdateCallback(device);
             callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout), true);
 
@@ -100,5 +108,16 @@ public class Main {
                     .map(sensor -> new FoTSensor(deviceName, sensor))
                     .collect(toList());
         }
+    }
+
+    private static LatencyApiController setupLatencyLoggerApiController(String deviceId, String brokerIp) {
+        ExperimentConfig expConfig = ExperimentConfig.load();
+        logger.log(Level.INFO, expConfig.toString());
+
+        LatencyLoggerApiClient apiClient = new LatencyLoggerApiClient(expConfig.getApiUrl());
+        LatencyApiController controller = new LatencyApiController(apiClient, deviceId, brokerIp,expConfig);
+        controller.start();
+        logger.log(Level.INFO, "Setup Latency Logger API finished.");
+        return controller;
     }
 }

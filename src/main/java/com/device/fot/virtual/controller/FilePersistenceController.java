@@ -14,7 +14,7 @@ import java.util.logging.Logger;
  *
  * @author Uellington Damasceno
  */
-public abstract class PersistenceController<T> implements Runnable {
+public abstract class FilePersistenceController<T> implements Runnable {
 
     protected int bufferSize = 64;
     protected boolean running = false, canSaveData = false;
@@ -22,9 +22,9 @@ public abstract class PersistenceController<T> implements Runnable {
     protected String fileName;
     protected LinkedBlockingQueue<T> buffer = new LinkedBlockingQueue<>();
     protected StandardOpenOption fileOpenOption;
-    private static final Logger logger = Logger.getLogger(PersistenceController.class.getName());
+    private static final Logger logger = Logger.getLogger(FilePersistenceController.class.getName());
     
-    protected PersistenceController(String fileName) {
+    protected FilePersistenceController(String fileName) {
         this.fileName = fileName;
     }
     

@@ -1,5 +1,6 @@
 package com.device.fot.virtual.model;
 
+import com.device.fot.virtual.controller.LatencyApiController;
 import com.device.fot.virtual.controller.LatencyLogController;
 import com.device.fot.virtual.controller.MessageLogController;
 import java.util.LinkedList;
@@ -29,6 +30,7 @@ public class FoTSensor extends Sensor implements Runnable {
     private Random random;
 
     private int lastValue;
+    private LatencyApiController latencyLoggerController;
 
     private final static AtomicInteger messageId = new AtomicInteger(0);
 
@@ -164,7 +166,7 @@ public class FoTSensor extends Sensor implements Runnable {
                 mqttMessage = new MqttMessage(msg.getBytes());
                 mqttMessage.setId(messageId.getAndIncrement());
                 mqttMessage.setQos(2);
-                LatencyLogController.getInstance().putNewMessage(mqttMessage.getId(), msg);
+                this.latencyLoggerController.putMessage(this.id, mqttMessage.getId(), msg);
                 this.publisher.publish(topic, mqttMessage);
                 MessageLogController.getInstance().putData(data);
             } catch (InterruptedException | MqttException ex) {
@@ -190,6 +192,10 @@ public class FoTSensor extends Sensor implements Runnable {
         sb.append(", running:").append(running);
         sb.append('}');
         return sb.toString();
+    }
+
+    public void setLatencyLoggerController(LatencyApiController latencyLoggerController) {
+        this.latencyLoggerController = latencyLoggerController;
     }
 
 }

@@ -4,7 +4,7 @@ package com.device.fot.virtual.controller;
 import com.device.fot.virtual.model.Data;
 import java.util.ArrayList;
 
-public class MessageLogController extends PersistenceController<Data> {
+public class MessageLogController extends FilePersistenceController<Data> {
 
     private static MessageLogController messageLogController = new MessageLogController();
 

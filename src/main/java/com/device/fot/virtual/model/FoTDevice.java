@@ -1,6 +1,7 @@
 package com.device.fot.virtual.model;
 
 import com.device.fot.virtual.controller.DefaultFlowCallback;
+import com.device.fot.virtual.controller.LatencyApiController;
 import extended.tatu.wrapper.model.Device;
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
@@ -23,9 +24,13 @@ public class FoTDevice extends Device {
     private MqttClient client;
     private boolean updating;
     private MqttCallback callback;
+    private LatencyApiController latencyLoggerController;
+    
 
-    public FoTDevice(String name, List<Sensor> sensors) {
+    public FoTDevice(String name, List<Sensor> sensors, LatencyApiController latencyLoggerController) {
         super(name, new Random().nextDouble(), new Random().nextDouble(), sensors);
+        this.latencyLoggerController = latencyLoggerController;
+        this.getFoTSensors().forEach(s -> s.setLatencyLoggerController(latencyLoggerController));
         this.updating = false;
     }
 
@@ -70,7 +75,7 @@ public class FoTDevice extends Device {
             this.client.connect(options);
         }
 
-        this.client.subscribe(TATUWrapper.buildTATUTopic(id), 1);
+        this.client.subscribe(TATUWrapper.buildTATUTopic(id), 2);
         this.getFoTSensors().forEach(sensor -> sensor.setPublisher(client));
 
         if (this.brokerSettings != null) {
@@ -102,5 +107,9 @@ public class FoTDevice extends Device {
                 .map(FoTSensor.class::cast)
                 .collect(Collectors.toList());
     }
-
+    
+    public void calculateLatency(int messageId){
+        this.latencyLoggerController.calculateLatancy(messageId);
+    }
+    
 }

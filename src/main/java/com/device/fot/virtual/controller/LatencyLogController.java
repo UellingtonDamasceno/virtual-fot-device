@@ -9,7 +9,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.JSONObject;
 
-public class LatencyLogController extends PersistenceController<Long> {
+public class LatencyLogController extends FilePersistenceController<Long> {
+
     private static final Logger logger = Logger.getLogger(LatencyLogController.class.getName());
     private static final LatencyLogController latencyLogController = new LatencyLogController();
 
@@ -36,7 +37,7 @@ public class LatencyLogController extends PersistenceController<Long> {
         }
         String messageContent = this.messages.remove(messageId);
         long customTimestamp = new JSONObject(messageContent).getJSONObject("HEADER").getLong("TIMESTAMP");
-        
+
         if (customTimestamp <= 0) {
             logger.log(Level.INFO, "The message{0} don''t have timestamp", messageContent);
             return;
@@ -58,12 +59,13 @@ public class LatencyLogController extends PersistenceController<Long> {
         var latencyLines = new ArrayList<String>(bufferSize);
         while (running) {
             try {
-                if (!buffer.isEmpty()) {
-                    latencyLines.add(this.buildLogLatencyLine(buffer.take()));
-                    if (latencyLines.size() >= bufferSize) {
-                        this.write(latencyLines);
-                        latencyLines.clear();
-                    }
+                if (buffer.isEmpty()) {
+                    continue;
+                }
+                latencyLines.add(this.buildLogLatencyLine(buffer.take()));
+                if (latencyLines.size() >= bufferSize) {
+                    this.write(latencyLines);
+                    latencyLines.clear();
                 }
             } catch (InterruptedException ex) {
                 this.write(latencyLines);
