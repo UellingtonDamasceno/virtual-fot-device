@@ -1,4 +1,4 @@
-FROM ubuntu:bionic as builder
+FROM ubuntu:bionic AS builder
 LABEL maintainder="UDamasceno <udamasceno@ecomp.uefs.br>"
 
 WORKDIR /opt
@@ -17,7 +17,7 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get autoremove -y\
 	&& apt-get autoremove -y\
 	&& apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-FROM adoptopenjdk/openjdk11:jre-11.0.18_10-alpine as vfd-run
+FROM adoptopenjdk/openjdk11:jre-11.0.18_10-alpine AS vfd-run
 WORKDIR /opt
 RUN apk add --update --no-cache \
 	bash \
