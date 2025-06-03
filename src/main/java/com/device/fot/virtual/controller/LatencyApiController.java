@@ -60,18 +60,16 @@ public class LatencyApiController implements Runnable {
     public void putMessage(String sensorId, Integer messageId, String message) {
         Map.Entry entry = Map.entry(sensorId, message);
         this.messages.put(messageId, entry);
-        logger.log(Level.INFO, "{0} PUT MESSAGE  - MAP COM MENSAGENS SIZE: {1}", new Object[]{messageId, this.messages.size()});
     }
 
     public void calculateLatancy(int messageId) {
         if (!this.messages.containsKey(messageId)) {
-            logger.log(Level.INFO, "N\u00e3o tem mensagem id: {0}", messageId);
+            logger.log(Level.INFO, "Não tem mensagem id: {0}", messageId);
             return;
         }
         long currentTimestamp = System.currentTimeMillis();
         
         Map.Entry<String, String> entry = this.messages.remove(messageId);
-        logger.log(Level.INFO, "{0} MESSAGE REMOVED - MAP COM MENSAGENS SIZE: {1}", new Object[]{messageId, this.messages.size()});
 
         String messageContent = entry.getValue();
         String sensorId = entry.getKey();
@@ -84,7 +82,6 @@ public class LatencyApiController implements Runnable {
         }
 
         long latency = currentTimestamp - customTimestamp;
-        System.out.println("Latency: " + latency + " messageId: " + messageId + " SensorId: " + sensorId + " message: " + messageContent);
 
         LatencyRecord record = LatencyRecord.of(deviceId, sensorId, brokerIp, expNum, expType, expLevel, latency, messageContent);
         this.buffer.add(record);
@@ -103,7 +100,7 @@ public class LatencyApiController implements Runnable {
 
                 if (latencyLines.size() >= bufferSize) {
                     apiClient.postAllLatencies(latencyLines);
-                    logger.log(Level.INFO, "WHEN SEND TO API - MAP COM MENSAGENS SIZE: {0}", this.messages.size());
+                    logger.log(Level.INFO, "SEND TO API - MAP COM MENSAGENS SIZE: {0}", this.messages.size());
                     latencyLines.clear();
                 }
             } catch (InterruptedException | IOException ex) {

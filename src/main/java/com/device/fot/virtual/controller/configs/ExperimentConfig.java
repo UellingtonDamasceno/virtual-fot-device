@@ -1,6 +1,5 @@
 package com.device.fot.virtual.controller.configs;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ExperimentConfig {

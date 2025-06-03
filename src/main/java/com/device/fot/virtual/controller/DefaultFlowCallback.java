@@ -24,6 +24,7 @@ public class DefaultFlowCallback implements MqttCallback {
 
     private FoTDevice device;
     private BrokerUpdateCallback brokerUpdateController;
+    private static final Logger logger = Logger.getLogger(DefaultFlowCallback.class.getName());
 
     public DefaultFlowCallback(FoTDevice device) {
         this.device = device;
@@ -62,16 +63,22 @@ public class DefaultFlowCallback implements MqttCallback {
                     var newMessage = tatuMessage.getMessageContent();
 
                     var newBrokerSettingsJson = new JSONObject(newMessage);
+                    var id = newBrokerSettingsJson.getString("id");
+                    var ip = newBrokerSettingsJson.getString("url");
+                    var port = newBrokerSettingsJson.getString("port");
 
                     BrokerSettings newBrokerSettings = BrokerSettingsBuilder.builder()
-                            .deviceId(newBrokerSettingsJson.getString("id"))
-                            .setBrokerIp(newBrokerSettingsJson.getString("url"))
-                            .setPort(newBrokerSettingsJson.getString("port"))
+                            .deviceId(id)
+                            .setBrokerIp(ip)
+                            .setPort(port)
                             .setUsername(newBrokerSettingsJson.getString("user"))
                             .setPassword(newBrokerSettingsJson.getString("password"))
                             .build();
+                    
+                    logger.log(Level.WARNING, "Change to gateway id {0} ip:port: {1}:{2}", new Object[]{id, id, port});
 
                     this.brokerUpdateController.startUpdateBroker(newBrokerSettings, 10.000, false);
+
                 } else {
                     System.out.println("The device is updating: " + this.device.isUpdating());
                 }
@@ -92,7 +99,6 @@ public class DefaultFlowCallback implements MqttCallback {
     @Override
     public void deliveryComplete(IMqttDeliveryToken imdt) {
         this.device.calculateLatency(imdt.getResponse().getMessageId() - 5);
-//        LatencyLogController.getInstance().calculateLatancy(imdt.getResponse().getMessageId() - 5);
     }
 
     @Override
