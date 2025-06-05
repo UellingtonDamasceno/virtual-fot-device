@@ -33,17 +33,24 @@ public class DefaultFlowCallback implements MqttCallback {
 
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        TATUMessage tatuMessage = new TATUMessage(mqttMessage.getPayload());
+        String messagePayload = new String(mqttMessage.getPayload());
+        TATUMessage tatuMessage = new TATUMessage(messagePayload);
         MqttMessage mqttResponse = new MqttMessage();
         FoTSensor sensor;
 
-        System.out.println("MQTT_MESSAGE: " + new String(mqttMessage.getPayload()));
-        System.out.println("MY_MESSAGE: " + tatuMessage);
+        logger.log(Level.INFO, "Message arrived on topic ''{0}'': {1}", new Object[]{topic, messagePayload});
+        logger.log(Level.INFO, "Parsed TATU Message for device ''{0}'' on topic ''{1}'': Method={2}, Target=''{3}'', Content=''{4}''",
+                new Object[]{device.getId(), topic, tatuMessage.getMethod(), tatuMessage.getTarget(), tatuMessage.getMessageContent()});
 
         switch (tatuMessage.getMethod()) {
             case FLOW:
+                logger.log(Level.INFO, "Processing FLOW request for target: {0}", tatuMessage.getTarget());
                 sensor = (FoTSensor) device.getSensorBySensorId(tatuMessage.getTarget())
                         .orElse(NullFoTSensor.getInstance());
+                if (sensor instanceof NullFoTSensor) {
+                    logger.log(Level.WARNING, "FLOW request for unknown sensor: {0}", tatuMessage.getTarget());
+                    break;
+                }
                 JSONObject flow = new JSONObject(tatuMessage.getMessageContent());
                 sensor.startFlow(flow.getInt("collect"), flow.getInt("publish"));
                 break;
@@ -59,14 +66,19 @@ public class DefaultFlowCallback implements MqttCallback {
                 this.device.publish(publishTopic, mqttResponse);
                 break;
             case SET:
-                if (tatuMessage.getTarget().equalsIgnoreCase("brokerMqtt") && !this.device.isUpdating()) {
+                logger.log(Level.INFO, "Processing SET request for target: {0}", tatuMessage.getTarget());
+                if (tatuMessage.getTarget().equalsIgnoreCase("brokerMqtt")) {
+                    if (this.device.isUpdating()) {
+                        logger.log(Level.WARNING, "Device {0} is currently updating its broker. Ignoring SET brokerMqtt request.", device.getId());
+                        break;
+                    }
                     var newMessage = tatuMessage.getMessageContent();
-
+                    logger.log(Level.INFO, "SET brokerMqtt payload: {0}", newMessage);
                     var newBrokerSettingsJson = new JSONObject(newMessage);
                     var id = newBrokerSettingsJson.getString("id");
                     var ip = newBrokerSettingsJson.getString("url");
                     var port = newBrokerSettingsJson.getString("port");
-
+                    logger.log(Level.WARNING, "Change to gateway id {0} ip:port: {1}:{2}", new Object[]{id, ip, port});
                     BrokerSettings newBrokerSettings = BrokerSettingsBuilder.builder()
                             .deviceId(id)
                             .setBrokerIp(ip)
@@ -74,23 +86,26 @@ public class DefaultFlowCallback implements MqttCallback {
                             .setUsername(newBrokerSettingsJson.getString("user"))
                             .setPassword(newBrokerSettingsJson.getString("password"))
                             .build();
-                    
+
                     logger.log(Level.WARNING, "Change to gateway id {0} ip:port: {1}:{2}", new Object[]{id, id, port});
 
                     this.brokerUpdateController.startUpdateBroker(newBrokerSettings, 10.000, false);
 
                 } else {
-                    System.out.println("The device is updating: " + this.device.isUpdating());
+                    logger.log(Level.WARNING, "Received SET request for an unsupported target: {0}", tatuMessage.getTarget());
                 }
                 break;
             case EVT:
+                logger.log(Level.INFO, "Received EVT request (currently not supported) for target: {0}", tatuMessage.getTarget());
                 break;
             case POST:
+                logger.log(Level.INFO, "Received POST request for target: {0}. No specific action implemented in this callback.", tatuMessage.getTarget());
                 break;
             case INVALID:
                 System.out.println("Invalid message!");
                 break;
             default:
+                logger.log(Level.SEVERE, "Unsupported TATU method encountered: {0} on topic {1}", new Object[]{tatuMessage.getMethod().name(), topic});
                 throw new AssertionError(tatuMessage.getMethod().name());
         }
 
@@ -103,7 +118,6 @@ public class DefaultFlowCallback implements MqttCallback {
 
     @Override
     public void connectionLost(Throwable cause) {
-        Logger.getLogger(DefaultFlowCallback.class
-                .getName()).log(Level.SEVERE, null, cause);
+        logger.log(Level.SEVERE, "MQTT connection lost for device " + device.getId() + ". Cause: " + cause.getMessage(), cause);
     }
 }

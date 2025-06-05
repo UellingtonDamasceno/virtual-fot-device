@@ -36,6 +36,10 @@ public class BrokerSettings {
         this.hashCode = -1;
     }
 
+    public String getUri(){
+        return uri;
+    }
+    
     public String getUrl() {
         return url;
     }

@@ -16,12 +16,16 @@ import extended.tatu.wrapper.model.TATUMessage;
 import extended.tatu.wrapper.util.ExtendedTATUWrapper;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Uellington Damasceno
  */
 public class BrokerUpdateCallback implements MqttCallback, Runnable {
+
+    private static final Logger logger = Logger.getLogger(BrokerUpdateCallback.class.getName());
 
     private FoTDevice device;
     private BrokerSettings brokerSettings;
@@ -35,9 +39,10 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
     public void startUpdateBroker(BrokerSettings brokerSettings, double timeout, boolean retryConnect) {
         if (this.device.isUpdating()) {
-            System.out.println("Device já está atualizando.");
+            logger.log(Level.INFO, "Device {0} is already in the process of updating the broker. Ignoring new request.", device.getId());
             return;
         }
+        logger.log(Level.INFO, "Device {0} starting broker update process for: {1}", new Object[]{device.getId(), brokerSettings.getUrl()});
 
         this.device.setIsUpdating(true);
         MqttConnectOptions newOptions = brokerSettings.getConnectionOptions();
@@ -66,23 +71,33 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
     @Override
     public void connectionLost(Throwable cause) {
-
+        logger.log(Level.SEVERE, "MQTT connection lost for device " + device.getId() + " with broker " + (brokerSettings != null ? brokerSettings.getUri() : "UNKNOWN_BROKER") + ". Cause: " + cause.getMessage(), cause);
     }
 
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        String message = new String(mqttMessage.getPayload());
-        TATUMessage tatuMessage = new TATUMessage(message);
+        String messagePayload = new String(mqttMessage.getPayload());
+        logger.log(Level.INFO, "Message arrived on topic ''{0}'': {1}", new Object[]{topic, messagePayload}); // FINER for raw message
+
+        TATUMessage tatuMessage = new TATUMessage(messagePayload);
         if (!tatuMessage.isResponse() || !tatuMessage.getMethod().equals(ExtendedTATUMethods.CONNACK)) {
+            logger.log(Level.WARNING, "Parsed TATUMessage from topic ''{0}'': Method={1}, Target={2}", new Object[]{topic, tatuMessage.getMethod(), tatuMessage.getTarget()});
             return;
         }
         this.timeoutCounter.interrupt();
         var json = new JSONObject(tatuMessage.getMessageContent());
-        if (json.getJSONObject("BODY").getBoolean("CAN_CONNECT")) {
+        boolean canConnect = json.getJSONObject("BODY").getBoolean("CAN_CONNECT");
+
+        logger.log(Level.INFO, "CONNACK received for device {0}: CAN_CONNECT={1}. New broker: {2}", new Object[]{device.getId(), canConnect, brokerSettings.getUri()});
+
+        if (canConnect) {
             this.device.updateBrokerSettings(brokerSettings);
             this.brokerSettings.getClient().unsubscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
+            logger.log(Level.INFO, "Device {0} successfully updated to new broker: {1}. Unsubscribed from connection response topic.", new Object[]{device.getId(), brokerSettings.getUri()});
+            device.setIsUpdating(false);
         } else {
             this.brokerSettings.disconnectClient();
+            logger.log(Level.WARNING, "Device {0} connection to new broker {1} denied by CONNACK. Disconnecting new client.", new Object[]{device.getId(), brokerSettings.getUri()});
         }
     }
 
@@ -95,10 +110,12 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
         try {
             Thread.sleep(10000L);
             if (this.device.isUpdating()) {
+                logger.log(Level.WARNING, "Broker update for device {0} timed out. Disconnecting client for {1}.", new Object[]{device.getId(), brokerSettings.getUri()});
                 this.device.setIsUpdating(false);
                 this.brokerSettings.disconnectClient();
             }
         } catch (InterruptedException ex) {
+            logger.log(Level.INFO, "Broker update timeout thread for device {0} was interrupted, likely due to successful CONNACK or shutdown.", device.getId());
         }
     }
 
@@ -106,11 +123,12 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
         boolean connected = false;
         do {
             try {
-                System.out.println("Conectando ao broker...");
+                logger.log(Level.INFO, "Attempting to connect to broker: {0} for device: {1}", new Object[]{client.getServerURI(), device.getId()});
                 client.connect(options);
+                logger.log(Level.INFO, "Successfully connected to broker: {0} for device: {1}", new Object[]{client.getServerURI(), device.getId()});
                 connected = true;
             } catch (MqttException e) {
-                System.out.println("Falha ao conectar ao broker.");
+                logger.log(Level.WARNING, "Failed to connect to broker: " + client.getServerURI() + " on attempt. Retrying: " + retryConnect, e);
                 if (!retryConnect) {
                     return;
                 }
@@ -121,7 +139,7 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
             }
         } while (!connected && retryConnect);
     }
-    
+
     public final String getIpAddress() {
         try {
             InetAddress localhost = InetAddress.getLocalHost();
