@@ -67,33 +67,29 @@ public class DefaultFlowCallback implements MqttCallback {
                 break;
             case SET:
                 logger.log(Level.INFO, "Processing SET request for target: {0}", tatuMessage.getTarget());
-                if (tatuMessage.getTarget().equalsIgnoreCase("brokerMqtt")) {
-                    if (this.device.isUpdating()) {
-                        logger.log(Level.WARNING, "Device {0} is currently updating its broker. Ignoring SET brokerMqtt request.", device.getId());
-                        break;
-                    }
-                    var newMessage = tatuMessage.getMessageContent();
-                    logger.log(Level.INFO, "SET brokerMqtt payload: {0}", newMessage);
-                    var newBrokerSettingsJson = new JSONObject(newMessage);
-                    var id = newBrokerSettingsJson.getString("id");
-                    var ip = newBrokerSettingsJson.getString("url");
-                    var port = newBrokerSettingsJson.getString("port");
-                    logger.log(Level.WARNING, "Change to gateway id {0} ip:port: {1}:{2}", new Object[]{id, ip, port});
-                    BrokerSettings newBrokerSettings = BrokerSettingsBuilder.builder()
-                            .deviceId(id)
-                            .setBrokerIp(ip)
-                            .setPort(port)
-                            .setUsername(newBrokerSettingsJson.getString("user"))
-                            .setPassword(newBrokerSettingsJson.getString("password"))
-                            .build();
-
-                    logger.log(Level.WARNING, "Change to gateway id {0} ip:port: {1}:{2}", new Object[]{id, id, port});
-
-                    this.brokerUpdateController.startUpdateBroker(newBrokerSettings, 10.000, false);
-
-                } else {
-                    logger.log(Level.WARNING, "Received SET request for an unsupported target: {0}", tatuMessage.getTarget());
+                if (this.device.isUpdating()) {
+                    logger.log(Level.WARNING, "Device {0} is currently updating its broker. Ignoring SET brokerMqtt request.", device.getId());
+                    break;
                 }
+                var newMessage = tatuMessage.getMessageContent();
+                logger.log(Level.INFO, "SET brokerMqtt payload: {0}", newMessage);
+                var newBrokerSettingsJson = new JSONObject(newMessage);
+                var id = newBrokerSettingsJson.getString("id");
+                var ip = newBrokerSettingsJson.getString("url");
+                var port = newBrokerSettingsJson.getString("port");
+                logger.log(Level.WARNING, "Change to gateway id {0} ip:port: {1}:{2}", new Object[]{id, ip, port});
+                BrokerSettings newBrokerSettings = BrokerSettingsBuilder.builder()
+                        .deviceId(id)
+                        .setBrokerIp(ip)
+                        .setPort(port)
+                        .setUsername(newBrokerSettingsJson.getString("user"))
+                        .setPassword(newBrokerSettingsJson.getString("password"))
+                        .build();
+
+                logger.log(Level.WARNING, "Change to gateway id {0} ip:port: {1}:{2}", new Object[]{id, id, port});
+
+                this.brokerUpdateController.startUpdateBroker(newBrokerSettings, 10.000, false);
+
                 break;
             case EVT:
                 logger.log(Level.INFO, "Received EVT request (currently not supported) for target: {0}", tatuMessage.getTarget());
