@@ -5,9 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.json.JSONObject;
 
 public class LatencyLogController extends FilePersistenceController<Long> {
 
@@ -28,23 +26,6 @@ public class LatencyLogController extends FilePersistenceController<Long> {
 
     public void putNewMessage(int id, String message) {
         this.messages.put(id, message);
-    }
-
-    public void calculateLatancy(int messageId) {
-        if (!this.messages.containsKey(messageId)) {
-            logger.log(Level.INFO, "N\u00e3o tem mensagem id: {0}", messageId);
-            return;
-        }
-        String messageContent = this.messages.remove(messageId);
-        long customTimestamp = new JSONObject(messageContent).getJSONObject("HEADER").getLong("TIMESTAMP");
-
-        if (customTimestamp <= 0) {
-            logger.log(Level.INFO, "The message{0} don''t have timestamp", messageContent);
-            return;
-        }
-
-        long latency = System.currentTimeMillis() - customTimestamp;
-        this.buffer.add(latency);
     }
 
     private String buildLogLatencyLine(Long latency) {

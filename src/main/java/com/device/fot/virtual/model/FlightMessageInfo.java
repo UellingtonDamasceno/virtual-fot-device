@@ -10,7 +10,7 @@ public class FlightMessageInfo {
     private final String message;
 
     public FlightMessageInfo(String sensorId, String message){
-        this(sensorId, System.currentTimeMillis(), message);
+        this(sensorId, System.nanoTime(), message);
     }
     
     public FlightMessageInfo(String sensorId, Long timestamp, String message) {
@@ -32,6 +32,6 @@ public class FlightMessageInfo {
     }
 
     public long getElapsedTimeSinceSent() {
-        return System.currentTimeMillis() - this.timestamp;
+        return System.nanoTime() - this.timestamp;
     }
 }

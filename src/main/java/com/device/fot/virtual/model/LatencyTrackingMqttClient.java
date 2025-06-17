@@ -52,7 +52,7 @@ public class LatencyTrackingMqttClient extends MqttClient {
         return token;
     }
 
-    public void calculateLatency(IMqttDeliveryToken token) {
+    public void calculateRTT(IMqttDeliveryToken token) {
         if (!this.inFlightMessages.containsKey(token)) {
             logger.log(Level.INFO, "Não tem mensagem id: {0}", token.getMessageId());
             return;
@@ -61,8 +61,8 @@ public class LatencyTrackingMqttClient extends MqttClient {
 
         String messageContent = messageInfo.getMessage();
         String sensorId = messageInfo.getSensorId();
-        Long latency = messageInfo.getElapsedTimeSinceSent();
-        LatencyRecord record = LatencyRecord.of(deviceId, sensorId, brokerIp, expNum, expType, expLevel, latency, messageContent);
+        Long rtt = messageInfo.getElapsedTimeSinceSent();
+        LatencyRecord record = LatencyRecord.of(deviceId, sensorId, brokerIp, expNum, expType, expLevel, rtt, messageContent);
         this.latencyApi.putLatencyRecord(record);
     }
 

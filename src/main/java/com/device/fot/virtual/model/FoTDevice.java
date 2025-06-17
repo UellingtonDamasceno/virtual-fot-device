@@ -108,6 +108,6 @@ public class FoTDevice extends Device {
     }
 
     public void calculateLatency(IMqttDeliveryToken token) {
-        this.client.calculateLatency(token);
+        this.client.calculateRTT(token);
     }
 }
