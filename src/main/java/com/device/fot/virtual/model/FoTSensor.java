@@ -1,18 +1,14 @@
 package com.device.fot.virtual.model;
 
-import com.device.fot.virtual.controller.LatencyApiController;
-import com.device.fot.virtual.controller.LatencyLogController;
 import com.device.fot.virtual.controller.MessageLogController;
 import java.util.LinkedList;
 import java.util.Random;
 
-import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -24,15 +20,12 @@ public class FoTSensor extends Sensor implements Runnable {
     private boolean flow, running;
 
     private Thread thread;
-    private MqttClient publisher;
+    private LatencyTrackingMqttClient publisher;
 
     private String flowThreadName;
     private Random random;
 
     private int lastValue;
-    private LatencyApiController latencyLoggerController;
-
-    private final static AtomicInteger messageId = new AtomicInteger(0);
 
     public FoTSensor(String deviceId, Sensor sensor) {
         this(deviceId,
@@ -68,7 +61,7 @@ public class FoTSensor extends Sensor implements Runnable {
         this.deviceId = deviceId;
     }
 
-    public void setPublisher(MqttClient publisher) {
+    public void setPublisher(LatencyTrackingMqttClient publisher) {
         this.publisher = publisher;
     }
 
@@ -157,17 +150,13 @@ public class FoTSensor extends Sensor implements Runnable {
         String topic = TATUWrapper.buildTATUResponseTopic(deviceId);
         this.flow = true;
         this.running = true;
-        MqttMessage mqttMessage;
+
         while (thread.isAlive() && this.running && this.flow) {
             try {
                 var data = this.getDataFlow();
                 msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime,
                         data.getValues().toArray());
-                mqttMessage = new MqttMessage(msg.getBytes());
-                mqttMessage.setId(messageId.getAndIncrement());
-                mqttMessage.setQos(2);
-                this.latencyLoggerController.putMessage(this.id, mqttMessage.getId(), msg);
-                this.publisher.publish(topic, mqttMessage);
+                this.publisher.publishAndTrack(topic, this.id, msg);
                 MessageLogController.getInstance().putData(data);
             } catch (InterruptedException | MqttException ex) {
                 this.running = false;
@@ -193,9 +182,5 @@ public class FoTSensor extends Sensor implements Runnable {
         sb.append('}');
         return sb.toString();
     }
-
-    public void setLatencyLoggerController(LatencyApiController latencyLoggerController) {
-        this.latencyLoggerController = latencyLoggerController;
-    }
-
+    
 }

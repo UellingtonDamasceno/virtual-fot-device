@@ -82,15 +82,17 @@ public class Main {
                 LatencyLogController.getInstance().setCanSaveData(true);
             }
 
-            LatencyApiController latencyLoggerController = setupLatencyLoggerApiController(deviceId, brokerIp);
-
             List<Sensor> sensors = readSensors("sensors.json", deviceId)
                     .stream()
                     .map(Sensor.class::cast)
                     .collect(toList());
+            
 
-            FoTDevice device = new FoTDevice(deviceId, sensors, latencyLoggerController);
-            BrokerUpdateCallback callback = new BrokerUpdateCallback(device);
+            ExperimentConfig expConfig = ExperimentConfig.load();
+            setupLatencyLoggerApiController(expConfig, deviceId, brokerIp);
+
+            FoTDevice device = new FoTDevice(deviceId, sensors, expConfig);
+            BrokerUpdateCallback callback = new BrokerUpdateCallback(device, expConfig);
             callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout), true);
 
         } catch (IOException ex) {
@@ -110,12 +112,11 @@ public class Main {
         }
     }
 
-    private static LatencyApiController setupLatencyLoggerApiController(String deviceId, String brokerIp) {
-        ExperimentConfig expConfig = ExperimentConfig.load();
-        logger.log(Level.INFO, expConfig.toString());
+    private static LatencyApiController setupLatencyLoggerApiController(ExperimentConfig config, String deviceId, String brokerIp) {
+        logger.log(Level.INFO, config.toString());
 
-        LatencyLoggerApiClient apiClient = new LatencyLoggerApiClient(expConfig.getApiUrl());
-        LatencyApiController controller = new LatencyApiController(apiClient, deviceId, brokerIp,expConfig);
+        LatencyLoggerApiClient apiClient = new LatencyLoggerApiClient(config.getApiUrl());
+        LatencyApiController controller = new LatencyApiController(apiClient, deviceId, brokerIp, config);
         controller.start();
         logger.log(Level.INFO, "Setup Latency Logger API finished.");
         return controller;

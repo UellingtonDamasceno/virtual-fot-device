@@ -1,5 +1,6 @@
 package com.device.fot.virtual.controller;
 
+import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -31,10 +32,12 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
     private BrokerSettings brokerSettings;
     private Thread timeoutCounter;
     private String ip;
+    private ExperimentConfig config;
 
-    public BrokerUpdateCallback(FoTDevice device) {
+    public BrokerUpdateCallback(FoTDevice device, ExperimentConfig config) {
         this.device = device;
         this.ip = this.getIpAddress();
+        this.config = config;
     }
 
     public void startUpdateBroker(BrokerSettings brokerSettings, double timeout, boolean retryConnect) {
@@ -52,7 +55,7 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
         this.timeoutCounter.setName("BROKER/UPDATE/TIMEOUT");
 
         try {
-            MqttClient newClient = brokerSettings.getClient();
+            MqttClient newClient = brokerSettings.getClient(config);
 
             newClient.setCallback(this);
 
@@ -92,7 +95,7 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
         if (canConnect) {
             this.device.updateBrokerSettings(brokerSettings);
-            this.brokerSettings.getClient().unsubscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
+            this.brokerSettings.getClient(config).unsubscribe(ExtendedTATUWrapper.getConnectionTopicResponse());
             logger.log(Level.INFO, "Device {0} successfully updated to new broker: {1}. Unsubscribed from connection response topic.", new Object[]{device.getId(), brokerSettings.getUri()});
             device.setIsUpdating(false);
         } else {
@@ -103,6 +106,7 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken token) {
+        this.device.calculateLatency(token);
     }
 
     @Override

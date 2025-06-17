@@ -5,12 +5,9 @@ import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import com.device.fot.virtual.model.LatencyRecord;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.json.JSONObject;
 
 /**
  *
@@ -20,13 +17,11 @@ public class LatencyApiController implements Runnable {
 
     private static final Logger logger = Logger.getLogger(LatencyApiController.class.getName());
     private final LatencyLoggerApiClient apiClient;
-    private final Map<Integer, Map.Entry<String, String>> messages;
     private final LinkedBlockingQueue<LatencyRecord> buffer;
     private boolean running;
 
     protected Thread thread;
-    private final String deviceId, brokerIp;
-    private final Integer bufferSize, expNum, expType, expLevel;
+    private final Integer bufferSize;
 
     public LatencyApiController(LatencyLoggerApiClient apiClient,
             String deviceId,
@@ -36,12 +31,7 @@ public class LatencyApiController implements Runnable {
         this.apiClient = apiClient;
         this.buffer = new LinkedBlockingQueue<>();
         this.bufferSize = config.getBufferSize();
-        this.deviceId = deviceId;
-        this.brokerIp = brokerIp;
-        this.messages = new ConcurrentHashMap<>();
-        this.expNum = config.getExpNum();
-        this.expType = config.getExpType();
-        this.expLevel = config.getExpLevel();
+
     }
 
     public void start() {
@@ -56,37 +46,11 @@ public class LatencyApiController implements Runnable {
     public void stop() {
         running = false;
     }
-
-    public void putMessage(String sensorId, Integer messageId, String message) {
-        Map.Entry entry = Map.entry(sensorId, message);
-        this.messages.put(messageId, entry);
-    }
-
-    public void calculateLatancy(int messageId) {
-        if (!this.messages.containsKey(messageId)) {
-            logger.log(Level.INFO, "Não tem mensagem id: {0}", messageId);
-            return;
-        }
-        long currentTimestamp = System.currentTimeMillis();
-        
-        Map.Entry<String, String> entry = this.messages.remove(messageId);
-
-        String messageContent = entry.getValue();
-        String sensorId = entry.getKey();
-
-        long customTimestamp = new JSONObject(messageContent).getJSONObject("HEADER").getLong("TIMESTAMP");
-
-        if (customTimestamp <= 0) {
-            logger.log(Level.INFO, "The message{0} don''t have timestamp", messageContent);
-            return;
-        }
-
-        long latency = currentTimestamp - customTimestamp;
-
-        LatencyRecord record = LatencyRecord.of(deviceId, sensorId, brokerIp, expNum, expType, expLevel, latency, messageContent);
+    
+    public void putLatencyRecord(LatencyRecord record){
         this.buffer.add(record);
     }
-
+    
     @Override
     public void run() {
         running = true;
@@ -100,7 +64,6 @@ public class LatencyApiController implements Runnable {
 
                 if (latencyLines.size() >= bufferSize) {
                     apiClient.postAllLatencies(latencyLines);
-                    logger.log(Level.INFO, "SEND TO API - MAP COM MENSAGENS SIZE: {0}", this.messages.size());
                     latencyLines.clear();
                 }
             } catch (InterruptedException | IOException ex) {

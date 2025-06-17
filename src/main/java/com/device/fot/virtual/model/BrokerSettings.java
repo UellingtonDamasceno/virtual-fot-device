@@ -1,8 +1,8 @@
 package com.device.fot.virtual.model;
 
+import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 
@@ -19,7 +19,7 @@ public class BrokerSettings {
     private final String username;
     private final String password;
 
-    private MqttClient client;
+    private LatencyTrackingMqttClient client;
     private int hashCode;
 
     protected BrokerSettings(String url, String port, String deviceId, String username, String password) {
@@ -60,9 +60,9 @@ public class BrokerSettings {
         return password;
     }
 
-    public MqttClient getClient() throws MqttException {
+    public LatencyTrackingMqttClient getClient(ExperimentConfig config) throws MqttException {
         return this.client == null
-                ? this.client = new MqttClient(this.uri, deviceId.concat("_CLIENT"))
+                ? this.client = new LatencyTrackingMqttClient(this.uri, deviceId.concat("_CLIENT"), this.url, config)
                 : this.client;
     }
 

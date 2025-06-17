@@ -1,5 +1,6 @@
 package com.device.fot.virtual.controller;
 
+import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -26,9 +27,9 @@ public class DefaultFlowCallback implements MqttCallback {
     private BrokerUpdateCallback brokerUpdateController;
     private static final Logger logger = Logger.getLogger(DefaultFlowCallback.class.getName());
 
-    public DefaultFlowCallback(FoTDevice device) {
+    public DefaultFlowCallback(FoTDevice device, ExperimentConfig config) {
         this.device = device;
-        this.brokerUpdateController = new BrokerUpdateCallback(device);
+        this.brokerUpdateController = new BrokerUpdateCallback(device, config);
     }
 
     @Override
@@ -109,7 +110,7 @@ public class DefaultFlowCallback implements MqttCallback {
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken imdt) {
-        this.device.calculateLatency(imdt.getResponse().getMessageId() - 5);
+        this.device.calculateLatency(imdt);
     }
 
     @Override

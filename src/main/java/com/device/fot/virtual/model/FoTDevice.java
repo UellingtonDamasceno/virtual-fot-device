@@ -1,15 +1,15 @@
 package com.device.fot.virtual.model;
 
 import com.device.fot.virtual.controller.DefaultFlowCallback;
-import com.device.fot.virtual.controller.LatencyApiController;
+import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import extended.tatu.wrapper.model.Device;
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -21,17 +21,16 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 public class FoTDevice extends Device {
 
     private BrokerSettings brokerSettings;
-    private MqttClient client;
+    private LatencyTrackingMqttClient client;
     private boolean updating;
     private MqttCallback callback;
-    private LatencyApiController latencyLoggerController;
+    private ExperimentConfig config;
     
 
-    public FoTDevice(String name, List<Sensor> sensors, LatencyApiController latencyLoggerController) {
+    public FoTDevice(String name, List<Sensor> sensors, ExperimentConfig config) {
         super(name, new Random().nextDouble(), new Random().nextDouble(), sensors);
-        this.latencyLoggerController = latencyLoggerController;
-        this.getFoTSensors().forEach(s -> s.setLatencyLoggerController(latencyLoggerController));
         this.updating = false;
+        this.config = config;
     }
 
     public void startFlow() {
@@ -65,10 +64,10 @@ public class FoTDevice extends Device {
 
     public void connect(BrokerSettings brokerSettings) throws MqttException {
 
-        this.client = brokerSettings.getClient();
+        this.client = brokerSettings.getClient(config);
 
         MqttConnectOptions options = brokerSettings.getConnectionOptions();
-        this.callback = (callback == null) ? callback = new DefaultFlowCallback(this) : callback;
+        this.callback = (callback == null) ? callback = new DefaultFlowCallback(this, config) : callback;
 
         this.client.setCallback(callback);
         if (!this.client.isConnected()) {
@@ -107,9 +106,8 @@ public class FoTDevice extends Device {
                 .map(FoTSensor.class::cast)
                 .collect(Collectors.toList());
     }
-    
-    public void calculateLatency(int messageId){
-        this.latencyLoggerController.calculateLatancy(messageId);
+
+    public void calculateLatency(IMqttDeliveryToken token) {
+        this.client.calculateLatency(token);
     }
-    
 }
