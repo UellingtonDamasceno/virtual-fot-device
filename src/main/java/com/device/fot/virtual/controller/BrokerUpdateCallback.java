@@ -106,7 +106,6 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken token) {
-        this.device.calculateLatency(token);
     }
 
     @Override
