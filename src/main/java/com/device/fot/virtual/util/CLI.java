@@ -17,24 +17,28 @@ public class CLI {
     public static Optional<String> getBrokerIp(String... args) {
         return getArgInList("-bi", args);
     }
-    
-    public static Optional<String> getPort(String... args){
+
+    public static Optional<String> getPort(String... args) {
         return getArgInList("-pt", args);
     }
-    
-    public static Optional<String> getPassword(String... args){
+
+    public static Optional<String> getPassword(String... args) {
         return getArgInList("-pw", args);
     }
-    
-    public static Optional<String> getUsername(String... args){
+
+    public static Optional<String> getUsername(String... args) {
         return getArgInList("-us", args);
     }
-    
-    public static Optional<String> getTimeout(String... args){
+
+    public static Optional<String> getTimeout(String... args) {
         return getArgInList("-to", args);
     }
-    
-    public static boolean hasParam(String arg, String... args){
+
+    public static Optional<String> getSensorNumber(String... args) {
+        return getArgInList("--sn", args);
+    }
+
+    public static boolean hasParam(String arg, String... args) {
         return Arrays.asList(args).indexOf(arg) != -1;
     }
 

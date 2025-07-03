@@ -1,11 +1,10 @@
 package com.device.fot.virtual.model;
 
-import com.device.fot.virtual.controller.MessageLogController;
+import com.device.fot.virtual.enums.SensorType;
 import java.util.LinkedList;
 import java.util.Random;
 
 import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
@@ -27,23 +26,22 @@ public class FoTSensor extends Sensor implements Runnable {
 
     private int lastValue;
 
-    public FoTSensor(String deviceId, Sensor sensor) {
-        this(deviceId,
-                sensor.getId(),
-                sensor.getType(),
-                sensor.getCollectionTime(),
-                sensor.getPublishingTime(),
-                sensor.getMinValue(),
-                sensor.getMaxValue(),
-                sensor.getDelta());
+    private FoTSensor(String deviceId, String sensorId, SensorType sensorType) {
+        this(deviceId, sensorId, sensorType, 1000, 100);
     }
 
     public FoTSensor(String deviceId,
-            String sensorName,
-            String type,
+            String sensorId,
+            SensorType type,
             int publishingTime,
-            int collectionTime, int minValue, int maxValue, int delta) {
-        super(sensorName, type, collectionTime, publishingTime, minValue, maxValue, delta);
+            int collectionTime) {
+
+        super(sensorId, type.getName(),
+                collectionTime,
+                publishingTime,
+                type.getMinValue(),
+                type.getMaxValue(),
+                type.getDelta());
 
         this.deviceId = deviceId;
         this.flow = false;
@@ -157,7 +155,6 @@ public class FoTSensor extends Sensor implements Runnable {
                 msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime,
                         data.getValues().toArray());
                 this.publisher.publishAndTrack(topic, this.id, msg);
-                MessageLogController.getInstance().putData(data);
             } catch (InterruptedException | MqttException ex) {
                 this.running = false;
             }
@@ -182,5 +179,10 @@ public class FoTSensor extends Sensor implements Runnable {
         sb.append('}');
         return sb.toString();
     }
-    
+
+    public static FoTSensor randomSensor(String deviceId, int sensorIdSufix) {
+        SensorType type = SensorType.getRandomSensor();
+        String sensorId = type.getName() + "_" + sensorIdSufix;
+        return new FoTSensor(deviceId, sensorId, type);
+    }
 }
