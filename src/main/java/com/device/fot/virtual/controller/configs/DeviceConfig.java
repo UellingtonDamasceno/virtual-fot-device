@@ -28,7 +28,7 @@ public class DeviceConfig {
         this.username = username == null ? "karaf" : username;
         this.password = password == null ? "karaf" : password;
         this.expNum = expNum == null ? "0" : expNum;
-        this.sensorNumber = sensorNumber == null ? "10" : sensorNumber;
+        this.sensorNumber = sensorNumber == null ? "100" : sensorNumber;
     }
 
     public static DeviceConfig load() {

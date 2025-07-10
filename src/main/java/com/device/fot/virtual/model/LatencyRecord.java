@@ -1,5 +1,7 @@
 package com.device.fot.virtual.model;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  *
  * @author Uellington Damasceno
@@ -110,4 +112,25 @@ public class LatencyRecord {
         this.brokerIp = brokerIp;
     }
 
+    @Override
+    public String toString() {
+        long nanos = (this.latency != null) ? this.latency : 0;
+
+        long minutes = TimeUnit.NANOSECONDS.toMinutes(nanos);
+        nanos -= TimeUnit.MINUTES.toNanos(minutes);
+
+        long seconds = TimeUnit.NANOSECONDS.toSeconds(nanos);
+        nanos -= TimeUnit.SECONDS.toNanos(seconds);
+
+        long millis = TimeUnit.NANOSECONDS.toMillis(nanos);
+        nanos -= TimeUnit.MILLISECONDS.toNanos(millis);
+
+        String formattedLatency = String.format(
+                "%d min, %d s, %d ms, %d ns",
+                minutes, seconds, millis, nanos
+        );
+
+        return "latency=" + formattedLatency
+                + ", sensorId='" + sensorId + '\'';
+    }
 }

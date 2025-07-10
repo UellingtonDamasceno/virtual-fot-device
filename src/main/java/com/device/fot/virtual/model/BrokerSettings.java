@@ -1,6 +1,7 @@
 package com.device.fot.virtual.model;
 
 import com.device.fot.virtual.controller.configs.ExperimentConfig;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
@@ -25,7 +26,7 @@ public class BrokerSettings {
     protected BrokerSettings(String url, String port, String deviceId, String username, String password) {
         this.url = url;
         this.port = port;
-        this.deviceId = deviceId;
+        this.deviceId = deviceId + new Random().nextInt(126);
         this.username = username;
         this.password = password;
         this.uri = new StringBuilder()
@@ -36,10 +37,10 @@ public class BrokerSettings {
         this.hashCode = -1;
     }
 
-    public String getUri(){
+    public String getUri() {
         return uri;
     }
-    
+
     public String getUrl() {
         return url;
     }
@@ -74,6 +75,7 @@ public class BrokerSettings {
         if (!this.password.isEmpty()) {
             connection.setPassword(this.password.toCharArray());
         }
+        connection.setMaxInflight(1024);
         return connection;
     }
 

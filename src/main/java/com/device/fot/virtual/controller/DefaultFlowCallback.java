@@ -44,7 +44,7 @@ public class DefaultFlowCallback implements MqttCallback {
                 new Object[]{device.getId(), topic, tatuMessage.getMethod(), tatuMessage.getTarget(), tatuMessage.getMessageContent()});
 
         switch (tatuMessage.getMethod()) {
-            case FLOW:
+            case FLOW -> {
                 logger.log(Level.INFO, "Processing FLOW request for target: {0}", tatuMessage.getTarget());
                 sensor = (FoTSensor) device.getSensorBySensorId(tatuMessage.getTarget())
                         .orElse(NullFoTSensor.getInstance());
@@ -54,8 +54,8 @@ public class DefaultFlowCallback implements MqttCallback {
                 }
                 JSONObject flow = new JSONObject(tatuMessage.getMessageContent());
                 sensor.startFlow(flow.getInt("collect"), flow.getInt("publish"));
-                break;
-            case GET:
+            }
+            case GET -> {
                 sensor = (FoTSensor) device.getSensorBySensorId(tatuMessage.getTarget())
                         .orElse(NullFoTSensor.getInstance());
                 String jsonResponse = TATUWrapper.buildGetMessageResponse(device.getId(),
@@ -65,8 +65,8 @@ public class DefaultFlowCallback implements MqttCallback {
                 mqttResponse.setPayload(jsonResponse.getBytes());
                 String publishTopic = TATUWrapper.buildTATUResponseTopic(device.getId());
                 this.device.publish(publishTopic, mqttResponse);
-                break;
-            case SET:
+            }
+            case SET -> {
                 logger.log(Level.INFO, "Processing SET request for target: {0}", tatuMessage.getTarget());
                 if (this.device.isUpdating()) {
                     logger.log(Level.WARNING, "Device {0} is currently updating its broker. Ignoring SET brokerMqtt request.", device.getId());
@@ -90,20 +90,14 @@ public class DefaultFlowCallback implements MqttCallback {
                 logger.log(Level.WARNING, "Change to gateway id {0} ip:port: {1}:{2}", new Object[]{id, id, port});
 
                 this.brokerUpdateController.startUpdateBroker(newBrokerSettings, 10.000, false);
-
-                break;
-            case EVT:
-                logger.log(Level.INFO, "Received EVT request (currently not supported) for target: {0}", tatuMessage.getTarget());
-                break;
-            case POST:
-                logger.log(Level.INFO, "Received POST request for target: {0}. No specific action implemented in this callback.", tatuMessage.getTarget());
-                break;
-            case INVALID:
-                System.out.println("Invalid message!");
-                break;
-            default:
+            }
+            case EVT -> logger.log(Level.INFO, "Received EVT request (currently not supported) for target: {0}", tatuMessage.getTarget());
+            case POST -> logger.log(Level.INFO, "Received POST request for target: {0}. No specific action implemented in this callback.", tatuMessage.getTarget());
+            case INVALID -> System.out.println("Invalid message!");
+            default -> {
                 logger.log(Level.SEVERE, "Unsupported TATU method encountered: {0} on topic {1}", new Object[]{tatuMessage.getMethod().name(), topic});
                 throw new AssertionError(tatuMessage.getMethod().name());
+            }
         }
 
     }

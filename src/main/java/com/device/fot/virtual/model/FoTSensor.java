@@ -8,6 +8,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
+import java.util.logging.Logger;
 
 /**
  *
@@ -15,8 +16,10 @@ import extended.tatu.wrapper.util.TATUWrapper;
  */
 public class FoTSensor extends Sensor implements Runnable {
 
-    private String deviceId;
-    private boolean flow, running;
+    private static final Logger logger = Logger.getLogger(LatencyTrackingMqttClient.class.getName());
+    private final Integer MAX_JITTER_DELAY_MS;
+    private String deviceId, publishTopic;
+    private boolean flow;
 
     private Thread thread;
     private LatencyTrackingMqttClient publisher;
@@ -25,6 +28,8 @@ public class FoTSensor extends Sensor implements Runnable {
     private Random random;
 
     private int lastValue;
+
+    private volatile boolean running;
 
     private FoTSensor(String deviceId, String sensorId, SensorType sensorType) {
         this(deviceId, sensorId, sensorType, 1000, 100);
@@ -44,19 +49,17 @@ public class FoTSensor extends Sensor implements Runnable {
                 type.getDelta());
 
         this.deviceId = deviceId;
+        this.publishTopic = TATUWrapper.buildTATUResponseTopic(deviceId);
         this.flow = false;
         this.running = false;
         this.random = new Random();
         this.lastValue = (minValue <= 0 && maxValue <= 0) ? 0 : (maxValue - minValue) + minValue;
         this.flowThreadName = this.buildFlowThreadName(deviceId, id);
+        this.MAX_JITTER_DELAY_MS = 1000;
     }
 
     public String deviceId() {
         return this.deviceId;
-    }
-
-    public void setDeviceId(String deviceId) {
-        this.deviceId = deviceId;
     }
 
     public void setPublisher(LatencyTrackingMqttClient publisher) {
@@ -95,9 +98,8 @@ public class FoTSensor extends Sensor implements Runnable {
             this.publishingTime = newFlowPublish;
             if (thread == null || !thread.isAlive()) {
                 System.out.println("Sensor type: " + type + " starting flow.");
-                this.thread = new Thread(this);
+                this.thread = Thread.ofVirtual().start(this);
                 this.thread.setName(flowThreadName);
-                this.thread.start();
             }
             return;
         }
@@ -114,11 +116,12 @@ public class FoTSensor extends Sensor implements Runnable {
     }
 
     public void stopFlow() {
-        if (this.thread != null && this.running) {
-            this.running = false;
-            this.flow = false;
-            this.thread.interrupt();
+        if (!running || this.thread == null) {
+            return;
         }
+        this.running = false;
+        this.flow = false;
+        this.thread.interrupt();
     }
 
     public boolean isRunnging() {
@@ -133,6 +136,7 @@ public class FoTSensor extends Sensor implements Runnable {
             tempPublish -= this.collectionTime;
             Thread.sleep(this.collectionTime);
         }
+        Thread.sleep(random.nextInt(this.MAX_JITTER_DELAY_MS));
         return new Data<>(this.deviceId, this.id, values);
     }
 
@@ -145,20 +149,24 @@ public class FoTSensor extends Sensor implements Runnable {
     @Override
     public void run() {
         String msg;
-        String topic = TATUWrapper.buildTATUResponseTopic(deviceId);
         this.flow = true;
         this.running = true;
 
-        while (thread.isAlive() && this.running && this.flow) {
+        while (running) {
             try {
-                var data = this.getDataFlow();
-                msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime,
-                        data.getValues().toArray());
-                this.publisher.publishAndTrack(topic, this.id, msg);
-            } catch (InterruptedException | MqttException ex) {
-                this.running = false;
+                Data<Integer> data = this.getDataFlow();
+                if (publisher != null && running) {
+                    msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime, data.getValues().toArray());
+                    publisher.publishAndTrack(this.publishTopic, this.id, msg);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (MqttException ex) {
+                System.err.println("MQTT Exception in sensor " + getId() + ": " + ex.getMessage());
+                running = false;
             }
         }
+        System.out.println("Sensor " + getId() + " has stopped.");
         this.running = false;
     }
 

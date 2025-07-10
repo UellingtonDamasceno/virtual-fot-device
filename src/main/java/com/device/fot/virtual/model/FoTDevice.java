@@ -7,6 +7,7 @@ import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -25,7 +26,6 @@ public class FoTDevice extends Device {
     private boolean updating;
     private MqttCallback callback;
     private ExperimentConfig config;
-    
 
     public FoTDevice(String name, List<Sensor> sensors, ExperimentConfig config) {
         super(name, new Random().nextDouble(), new Random().nextDouble(), sensors);
@@ -36,7 +36,7 @@ public class FoTDevice extends Device {
     public void startFlow() {
         this.getFoTSensors()
                 .stream()
-                .filter(FoTSensor::isFlow)
+                .filter(Predicate.not(FoTSensor::isFlow))
                 .forEach(FoTSensor::startFlow);
     }
 
@@ -89,6 +89,9 @@ public class FoTDevice extends Device {
         try {
             this.connect(newBrokerSettings);
         } catch (MqttException ex) {
+            if(oldBrokerSettings == null){
+                oldBrokerSettings = newBrokerSettings;
+            }
             this.connect(oldBrokerSettings);
         }
         this.startFlow();

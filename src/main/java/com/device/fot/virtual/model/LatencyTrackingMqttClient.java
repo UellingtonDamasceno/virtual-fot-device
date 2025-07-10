@@ -11,6 +11,7 @@ import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 /**
  *
@@ -28,7 +29,7 @@ public class LatencyTrackingMqttClient extends MqttClient {
     private final Integer expNum, expType, expLevel;
 
     public LatencyTrackingMqttClient(String serverURI, String deviceId, String brokerIp, ExperimentConfig config) throws MqttException {
-        super(serverURI, deviceId);
+        super(serverURI, deviceId, new MemoryPersistence());
 
         this.inFlightMessages = new ConcurrentHashMap<>();
         LatencyLoggerApiClient apiClient = new LatencyLoggerApiClient(config.getApiUrl());
@@ -63,6 +64,7 @@ public class LatencyTrackingMqttClient extends MqttClient {
         String sensorId = messageInfo.getSensorId();
         Long rtt = messageInfo.getElapsedTimeSinceSent();
         LatencyRecord record = LatencyRecord.of(deviceId, sensorId, brokerIp, expNum, expType, expLevel, rtt, messageContent);
+        logger.info(record.toString());
         this.latencyApi.putLatencyRecord(record);
     }
 

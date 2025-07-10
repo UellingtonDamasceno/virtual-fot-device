@@ -7,16 +7,17 @@
     <packaging>jar</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <graalvm.plugin.version>0.10.1</graalvm.plugin.version>
     </properties>
     <name>Virtual-FoT-Device</name>
     <distributionManagement>
-      <repository>
-        <id>github</id>
-        <name>virtual-fot-device</name>
-        <url>https://maven.pkg.github.com/UellingtonDamasceno/virtual-fot-device</url>
-      </repository>
+        <repository>
+            <id>github</id>
+            <name>virtual-fot-device</name>
+            <url>https://maven.pkg.github.com/UellingtonDamasceno/virtual-fot-device</url>
+        </repository>
     </distributionManagement>
     <dependencies>
         <dependency>
@@ -28,7 +29,7 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20200518</version>
+            <version>20231013</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -36,19 +37,13 @@
             <artifactId>extended-tatu-wrapper</artifactId>
             <version>latest</version>
         </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.22</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.6.0</version> 
                 <configuration>
                     <archive>
                         <manifest>
@@ -63,7 +58,7 @@
                     <execution>
                         <phase>package</phase>
                         <goals>
-                            <goal>attached</goal>
+                            <goal>single</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -71,39 +66,44 @@
         </plugins>
     </build>
     <profiles>
-    <profile>
-      <id>native</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.graalvm.buildtools</groupId>
-            <artifactId>native-maven-plugin</artifactId>
-            <version>0.9.16</version>
-            <extensions>true</extensions>
-            <executions>
-              <execution>
-                <id>build-native</id>
-                <goals>
-                  <goal>compile-no-fork</goal>
-                </goals>
-                <phase>package</phase>
-              </execution>
-              <execution>
-                <id>test-native</id>
-                <goals>
-                  <goal>test</goal>
-                </goals>
-                <phase>test</phase>
-              </execution>
-            </executions>
-            <configuration>
-              <!-- ... -->
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <!-- 1. Versão do plugin atualizada -->
+                        <version>${graalvm.plugin.version}</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <mainClass>com.device.fot.virtual.app.Main</mainClass>
+                            <imageName>virtual-fot-device</imageName>
+                            <buildArgs>
+                                <buildArg>--initialize-at-build-time=org.eclipse.paho.client.mqttv3.MqttAsyncClient</buildArg>
+                                <buildArg>--initialize-at-build-time=org.eclipse.paho.client.mqttv3.MqttClient</buildArg>
+                                <buildArg>--initialize-at-build-time=org.eclipse.paho.client.mqttv3.internal.CommsReceiver</buildArg>
+                                <buildArg>--initialize-at-build-time=org.eclipse.paho.client.mqttv3.internal.CommsSender</buildArg>
+                                
+                                <buildArg>--no-fallback</buildArg>
+                                <buildArg>--enable-url-protocols=http,https</buildArg>
+                                <buildArg>-H:ReflectionConfigurationFiles=src/main/resources/META-INF/native-image/reflect-config.json</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
     <repositories>
         <repository>
             <id>jitpack.io</id>
