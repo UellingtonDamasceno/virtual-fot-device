@@ -7,9 +7,8 @@ import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -33,25 +32,16 @@ public class FoTDevice extends Device {
         this.config = config;
     }
 
-    public void startFlow() {
-        this.getFoTSensors()
-                .stream()
-                .filter(Predicate.not(FoTSensor::isFlow))
-                .forEach(FoTSensor::startFlow);
+    public void restartFlow() {
+        this.applayActionAtSensor(FoTSensor::shouldRestartFlow, FoTSensor::restartFlow);
     }
 
     public void pauseFlow() {
-        this.getFoTSensors()
-                .stream()
-                .filter(FoTSensor::isFlow)
-                .forEach(FoTSensor::pauseFlow);
+        this.applayActionAtSensor(FoTSensor::isFlow, FoTSensor::pauseFlow);
     }
 
     public void stopFlow() {
-        this.getFoTSensors()
-                .stream()
-                .filter(FoTSensor::isRunnging)
-                .forEach(FoTSensor::stopFlow);
+        this.applayActionAtSensor(FoTSensor::isRunnging, FoTSensor::stopFlow);
     }
 
     public boolean isUpdating() {
@@ -63,11 +53,13 @@ public class FoTDevice extends Device {
     }
 
     public void connect(BrokerSettings brokerSettings) throws MqttException {
+        String brokerIp = brokerSettings.getUrl();
 
-        this.client = brokerSettings.getClient(config);
+        this.callback = (callback == null) ? callback = new DefaultFlowCallback(this, brokerIp, config) : callback;
+
+        this.client = brokerSettings.getClient();
 
         MqttConnectOptions options = brokerSettings.getConnectionOptions();
-        this.callback = (callback == null) ? callback = new DefaultFlowCallback(this, config) : callback;
 
         this.client.setCallback(callback);
         if (!this.client.isConnected()) {
@@ -75,7 +67,10 @@ public class FoTDevice extends Device {
         }
 
         this.client.subscribe(TATUWrapper.buildTATUTopic(id), 2);
-        this.getFoTSensors().forEach(sensor -> sensor.setPublisher(client));
+        Consumer<FoTSensor> definePublish = s -> s.setPublisher(client);
+        Predicate<FoTSensor> allSensors = s -> true;
+
+        this.applayActionAtSensor(allSensors, definePublish);
 
         if (this.brokerSettings != null) {
             this.brokerSettings.disconnectClient();
@@ -89,12 +84,12 @@ public class FoTDevice extends Device {
         try {
             this.connect(newBrokerSettings);
         } catch (MqttException ex) {
-            if(oldBrokerSettings == null){
+            if (oldBrokerSettings == null) {
                 oldBrokerSettings = newBrokerSettings;
             }
             this.connect(oldBrokerSettings);
         }
-        this.startFlow();
+        this.restartFlow();
         this.updating = false;
     }
 
@@ -102,15 +97,13 @@ public class FoTDevice extends Device {
         this.client.publish(topic, message);
     }
 
-    private List<FoTSensor> getFoTSensors() {
-        return this.getSensors()
+    private void applayActionAtSensor(Predicate<FoTSensor> filter, Consumer<FoTSensor> action) {
+        this.getSensors()
                 .stream()
                 .filter(FoTSensor.class::isInstance)
                 .map(FoTSensor.class::cast)
-                .collect(Collectors.toList());
+                .filter(filter)
+                .forEach(action);
     }
 
-    public void calculateLatency(IMqttDeliveryToken token) {
-        this.client.calculateRTT(token);
-    }
 }

@@ -1,5 +1,6 @@
 package com.device.fot.virtual.controller;
 
+import com.device.fot.virtual.api.LatencyLoggerApiClient;
 import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -8,8 +9,10 @@ import org.json.JSONObject;
 
 import com.device.fot.virtual.model.BrokerSettings;
 import com.device.fot.virtual.model.BrokerSettingsBuilder;
+import com.device.fot.virtual.model.FlightMessageInfo;
 import com.device.fot.virtual.model.FoTDevice;
 import com.device.fot.virtual.model.FoTSensor;
+import com.device.fot.virtual.model.LatencyRecord;
 import com.device.fot.virtual.model.NullFoTSensor;
 
 import extended.tatu.wrapper.model.TATUMessage;
@@ -24,12 +27,22 @@ import java.util.logging.Logger;
 public class DefaultFlowCallback implements MqttCallback {
 
     private FoTDevice device;
+    private String brokerIp;
     private BrokerUpdateCallback brokerUpdateController;
+    private final LatencyApiController latencyApi;
+    private ExperimentConfig expConfig;
+
     private static final Logger logger = Logger.getLogger(DefaultFlowCallback.class.getName());
 
-    public DefaultFlowCallback(FoTDevice device, ExperimentConfig config) {
+    public DefaultFlowCallback(FoTDevice device, String brokerIp, ExperimentConfig config) {
         this.device = device;
+        this.brokerIp = brokerIp;
+        this.expConfig = config;
+        
         this.brokerUpdateController = new BrokerUpdateCallback(device, config);
+        LatencyLoggerApiClient apiClient = new LatencyLoggerApiClient(config.getApiUrl());
+
+        this.latencyApi = new LatencyApiController(apiClient, device.getId(), brokerIp, config);
     }
 
     @Override
@@ -91,9 +104,12 @@ public class DefaultFlowCallback implements MqttCallback {
 
                 this.brokerUpdateController.startUpdateBroker(newBrokerSettings, 10.000, false);
             }
-            case EVT -> logger.log(Level.INFO, "Received EVT request (currently not supported) for target: {0}", tatuMessage.getTarget());
-            case POST -> logger.log(Level.INFO, "Received POST request for target: {0}. No specific action implemented in this callback.", tatuMessage.getTarget());
-            case INVALID -> System.out.println("Invalid message!");
+            case EVT ->
+                logger.log(Level.INFO, "Received EVT request (currently not supported) for target: {0}", tatuMessage.getTarget());
+            case POST ->
+                logger.log(Level.INFO, "Received POST request for target: {0}. No specific action implemented in this callback.", tatuMessage.getTarget());
+            case INVALID ->
+                System.out.println("Invalid message!");
             default -> {
                 logger.log(Level.SEVERE, "Unsupported TATU method encountered: {0} on topic {1}", new Object[]{tatuMessage.getMethod().name(), topic});
                 throw new AssertionError(tatuMessage.getMethod().name());
@@ -104,7 +120,19 @@ public class DefaultFlowCallback implements MqttCallback {
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken imdt) {
-        this.device.calculateLatency(imdt);
+        Object context = imdt.getUserContext();
+        if (!(context instanceof FlightMessageInfo)) {
+            logger.info("Viajou na batatinha");
+            return;
+        }
+        FlightMessageInfo messageInfo = (FlightMessageInfo) context;
+        String messageContent = messageInfo.getMessage();
+        String sensorId = messageInfo.getSensorId();
+        Long rtt = messageInfo.getElapsedTimeSinceSent();
+
+        LatencyRecord record = LatencyRecord.of(this.device.getId(), sensorId, brokerIp, this.expConfig, rtt, messageContent);
+        logger.log(Level.INFO, "{0} - {1}", new Object[]{record, sensorId});
+        this.latencyApi.putLatencyRecord(record);
     }
 
     @Override

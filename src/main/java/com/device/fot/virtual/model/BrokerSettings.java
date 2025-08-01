@@ -1,6 +1,5 @@
 package com.device.fot.virtual.model;
 
-import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -61,9 +60,9 @@ public class BrokerSettings {
         return password;
     }
 
-    public LatencyTrackingMqttClient getClient(ExperimentConfig config) throws MqttException {
+    public LatencyTrackingMqttClient getClient() throws MqttException {
         return this.client == null
-                ? this.client = new LatencyTrackingMqttClient(this.uri, deviceId.concat("_CLIENT"), this.url, config)
+                ? this.client = new LatencyTrackingMqttClient(this.uri, deviceId.concat("_CLIENT"))
                 : this.client;
     }
 

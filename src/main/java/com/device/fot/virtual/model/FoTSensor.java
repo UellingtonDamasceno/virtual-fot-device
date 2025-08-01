@@ -17,7 +17,8 @@ import java.util.logging.Logger;
 public class FoTSensor extends Sensor implements Runnable {
 
     private static final Logger logger = Logger.getLogger(LatencyTrackingMqttClient.class.getName());
-    private final Integer MAX_JITTER_DELAY_MS;
+
+    private final Integer initialJitterDelay;
     private String deviceId, publishTopic;
     private boolean flow;
 
@@ -31,15 +32,16 @@ public class FoTSensor extends Sensor implements Runnable {
 
     private volatile boolean running;
 
-    private FoTSensor(String deviceId, String sensorId, SensorType sensorType) {
-        this(deviceId, sensorId, sensorType, 1000, 100);
+    private FoTSensor(String deviceId, String sensorId, SensorType sensorType, Integer initialJitterDelay) {
+        this(deviceId, sensorId, sensorType, 1000, 100, initialJitterDelay);
     }
 
     public FoTSensor(String deviceId,
             String sensorId,
             SensorType type,
             int publishingTime,
-            int collectionTime) {
+            int collectionTime,
+            Integer initialJitterDelay) {
 
         super(sensorId, type.getName(),
                 collectionTime,
@@ -55,7 +57,7 @@ public class FoTSensor extends Sensor implements Runnable {
         this.random = new Random();
         this.lastValue = (minValue <= 0 && maxValue <= 0) ? 0 : (maxValue - minValue) + minValue;
         this.flowThreadName = this.buildFlowThreadName(deviceId, id);
-        this.MAX_JITTER_DELAY_MS = 1000;
+        this.initialJitterDelay = initialJitterDelay;
     }
 
     public String deviceId() {
@@ -68,6 +70,10 @@ public class FoTSensor extends Sensor implements Runnable {
 
     public boolean isFlow() {
         return this.flow;
+    }
+
+    public boolean shouldRestartFlow() {
+        return !this.running && this.flow;
     }
 
     @Override
@@ -88,7 +94,7 @@ public class FoTSensor extends Sensor implements Runnable {
         this.stopFlow();
     }
 
-    public void startFlow() {
+    public void restartFlow() {
         this.startFlow(this.collectionTime, this.publishingTime);
     }
 
@@ -101,6 +107,7 @@ public class FoTSensor extends Sensor implements Runnable {
                 this.thread = Thread.ofVirtual().start(this);
                 this.thread.setName(flowThreadName);
             }
+            this.flow = true;
             return;
         }
         if (this.running && this.flow) {
@@ -120,7 +127,6 @@ public class FoTSensor extends Sensor implements Runnable {
             return;
         }
         this.running = false;
-        this.flow = false;
         this.thread.interrupt();
     }
 
@@ -136,7 +142,6 @@ public class FoTSensor extends Sensor implements Runnable {
             tempPublish -= this.collectionTime;
             Thread.sleep(this.collectionTime);
         }
-        Thread.sleep(random.nextInt(this.MAX_JITTER_DELAY_MS));
         return new Data<>(this.deviceId, this.id, values);
     }
 
@@ -151,6 +156,12 @@ public class FoTSensor extends Sensor implements Runnable {
         String msg;
         this.flow = true;
         this.running = true;
+
+        try {
+            Thread.sleep(random.nextInt(this.initialJitterDelay));
+        } catch (InterruptedException ex) {
+            System.getLogger(FoTSensor.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
 
         while (running) {
             try {
@@ -188,9 +199,9 @@ public class FoTSensor extends Sensor implements Runnable {
         return sb.toString();
     }
 
-    public static FoTSensor randomSensor(String deviceId, int sensorIdSufix) {
+    public static FoTSensor randomSensor(String deviceId, int sensorIdSufix, Integer initialDelay) {
         SensorType type = SensorType.getRandomSensor();
         String sensorId = type.getName() + "_" + sensorIdSufix;
-        return new FoTSensor(deviceId, sensorId, type);
+        return new FoTSensor(deviceId, sensorId, type, initialDelay);
     }
 }

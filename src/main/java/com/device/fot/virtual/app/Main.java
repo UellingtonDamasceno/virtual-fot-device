@@ -14,6 +14,7 @@ import com.device.fot.virtual.util.CLI;
 import com.device.fot.virtual.util.SensorGenerator;
 
 import extended.tatu.wrapper.model.Sensor;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,6 +47,10 @@ public class Main {
 
         String timeout = CLI.getTimeout(args)
                 .orElse("10000");
+        
+        Integer jitterWindow = CLI.getJitterWindowMultiplier(args)
+                .map(Integer::valueOf)
+                .orElse(config.getJitterWindowMultiplier());
 
         BrokerSettings brokerSettings = BrokerSettingsBuilder
                 .builder()
@@ -58,22 +63,20 @@ public class Main {
 
         logger.info(brokerSettings.toString());
 
-        String sensorNumberStr = CLI.getSensorNumber(args)
+        Integer sensorNumber = CLI.getSensorNumber(args)
+                .map(Integer::valueOf)
                 .orElse(config.getSensorNumber());
 
-        int numberOfSensors = Integer.parseInt(sensorNumberStr);
+        logger.log(Level.INFO, "Number of sensors to generate: {0}", sensorNumber);
 
-        logger.log(Level.INFO, "Number of sensors to generate: {0}", numberOfSensors);
-
-        List<Sensor> sensors = SensorGenerator.generateSensors(deviceId, numberOfSensors);
+        List<Sensor> sensors = SensorGenerator.generateSensors(deviceId, jitterWindow, sensorNumber);
 
         ExperimentConfig expConfig = ExperimentConfig.load();
         setupLatencyLoggerApiController(expConfig, deviceId, brokerIp);
 
-        FoTDevice device = new FoTDevice(deviceId, sensors, expConfig);
+        FoTDevice device = new FoTDevice(deviceId+new Random().nextInt(1000), sensors, expConfig);
         BrokerUpdateCallback callback = new BrokerUpdateCallback(device, expConfig);
         callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout), true);
-
     }
 
     private static LatencyApiController setupLatencyLoggerApiController(ExperimentConfig config, String deviceId, String brokerIp) {

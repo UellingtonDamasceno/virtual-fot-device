@@ -1,5 +1,6 @@
 package com.device.fot.virtual.model;
 
+import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -21,18 +22,16 @@ public class LatencyRecord {
     public LatencyRecord(String deviceID,
             String sensorId,
             String brokerIp,
-            Integer experiment,
-            Integer type,
-            Integer level,
+            ExperimentConfig config,
             Long latency,
             String message) {
 
         this.deviceID = deviceID;
         this.sensorId = sensorId;
         this.brokerIp = brokerIp;
-        this.experiment = experiment;
-        this.type = type;
-        this.level = level;
+        this.experiment = config.getExpNum();
+        this.type = config.getExpType();
+        this.level = config.getExpLevel();
         this.latency = latency;
         this.message = message;
     }
@@ -40,12 +39,10 @@ public class LatencyRecord {
     public static LatencyRecord of(String deviceID,
             String sensorId,
             String brokerIp,
-            Integer experiment,
-            Integer type,
-            Integer level,
+            ExperimentConfig config,
             Long latency,
             String message) {
-        return new LatencyRecord(deviceID, sensorId, brokerIp, experiment, type, level, latency, message);
+        return new LatencyRecord(deviceID, sensorId, brokerIp, config, latency, message);
     }
 
     public String getDeviceID() {
@@ -130,7 +127,6 @@ public class LatencyRecord {
                 minutes, seconds, millis, nanos
         );
 
-        return "latency=" + formattedLatency
-                + ", sensorId='" + sensorId + '\'';
+        return formattedLatency;
     }
 }

@@ -38,6 +38,10 @@ public class CLI {
         return getArgInList("--sn", args);
     }
 
+    public static Optional<String> getJitterWindowMultiplier(String... args) {
+        return getArgInList("--jw", args);
+    }
+
     public static boolean hasParam(String arg, String... args) {
         return Arrays.asList(args).indexOf(arg) != -1;
     }
@@ -47,4 +51,5 @@ public class CLI {
         int index = largs.indexOf(arg);
         return (index == -1) ? Optional.empty() : Optional.of(largs.get(index + 1));
     }
+
 }
