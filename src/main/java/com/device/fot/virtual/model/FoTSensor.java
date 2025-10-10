@@ -8,6 +8,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -16,11 +17,10 @@ import java.util.logging.Logger;
  */
 public class FoTSensor extends Sensor implements Runnable {
 
-    private static final Logger logger = Logger.getLogger(LatencyTrackingMqttClient.class.getName());
+    private static final Logger logger = Logger.getLogger(FoTSensor.class.getName());
 
     private final Integer initialJitterDelay;
     private String deviceId, publishTopic;
-    private boolean flow;
 
     private Thread thread;
     private LatencyTrackingMqttClient publisher;
@@ -30,7 +30,7 @@ public class FoTSensor extends Sensor implements Runnable {
 
     private int lastValue;
 
-    private volatile boolean running;
+    private volatile boolean running, flow;
 
     private FoTSensor(String deviceId, String sensorId, SensorType sensorType, Integer initialJitterDelay) {
         this(deviceId, sensorId, sensorType, 1000, 100, initialJitterDelay);
@@ -73,7 +73,7 @@ public class FoTSensor extends Sensor implements Runnable {
     }
 
     public boolean shouldRestartFlow() {
-        return !this.running && this.flow;
+        return this.flow && !this.running;
     }
 
     @Override
@@ -98,39 +98,36 @@ public class FoTSensor extends Sensor implements Runnable {
         this.startFlow(this.collectionTime, this.publishingTime);
     }
 
-    public void startFlow(int newFlowCollect, int newFlowPublish) {
-        if (newFlowCollect >= 1 && newFlowPublish >= 1) {
-            this.collectionTime = newFlowCollect;
-            this.publishingTime = newFlowPublish;
-            if (thread == null || !thread.isAlive()) {
-                System.out.println("Sensor type: " + type + " starting flow.");
-                this.thread = Thread.ofVirtual().start(this);
-                this.thread.setName(flowThreadName);
-            }
-            this.flow = true;
-            return;
-        }
-        if (this.running && this.flow) {
+    public synchronized void startFlow(int newFlowCollect, int newFlowPublish) {
+        if (newFlowCollect < 1 || newFlowPublish < 1) {
+            logger.log(Level.WARNING, "Invalid collection/publishing time. Stopping flow for sensor {0}", getId());
             this.stopFlow();
-        }
-    }
-
-    public void pauseFlow() {
-        if (this.thread.isAlive() && this.running) {
-            this.running = false;
-            this.thread.interrupt();
-        }
-    }
-
-    public void stopFlow() {
-        if (!running || this.thread == null) {
             return;
         }
-        this.running = false;
-        this.thread.interrupt();
+
+        this.collectionTime = newFlowCollect;
+        this.publishingTime = newFlowPublish;
+
+        this.flow = true;
+
+        if (thread == null || !thread.isAlive()) {
+            logger.log(Level.INFO, "Starting flow for sensor {0}...", getId());
+            this.thread = Thread.ofVirtual().name(flowThreadName).start(this);
+        } else {
+            logger.log(Level.INFO, "Flow for sensor {0} is already running. Parameters updated.", getId());
+        }
     }
 
-    public boolean isRunnging() {
+    public synchronized void stopFlow() {
+        logger.log(Level.INFO, "Stopping flow for sensor {0}...", getId());
+        this.flow = false;
+
+        if (thread != null && thread.isAlive()) {
+            thread.interrupt();
+        }
+    }
+
+    public boolean isRunning() {
         return this.running;
     }
 
@@ -153,32 +150,31 @@ public class FoTSensor extends Sensor implements Runnable {
 
     @Override
     public void run() {
-        String msg;
-        this.flow = true;
         this.running = true;
 
         try {
             Thread.sleep(random.nextInt(this.initialJitterDelay));
-        } catch (InterruptedException ex) {
-            System.getLogger(FoTSensor.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-        }
-
-        while (running) {
-            try {
-                Data<Integer> data = this.getDataFlow();
-                if (publisher != null && running) {
-                    msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime, data.getValues().toArray());
-                    publisher.publishAndTrack(this.publishTopic, this.id, msg);
+            while (this.flow) {
+                try {
+                    Data<Integer> data = this.getDataFlow();
+                    if (publisher != null && this.flow) {
+                        String msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime, data.getValues().toArray());
+                        publisher.publishAndTrack(this.publishTopic, this.id, msg);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (MqttException ex) {
+                    logger.log(Level.SEVERE, "MQTT Exception in sensor {0}: {1}", new Object[]{getId(), ex.getMessage()});
+                    this.flow = false;
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (MqttException ex) {
-                System.err.println("MQTT Exception in sensor " + getId() + ": " + ex.getMessage());
-                running = false;
             }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        } finally {
+            logger.log(Level.INFO, "Sensor {0} has stopped.", getId());
+            this.running = false;
         }
-        System.out.println("Sensor " + getId() + " has stopped.");
-        this.running = false;
     }
 
     private String buildFlowThreadName(String deviceId, String id) {

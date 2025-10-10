@@ -5,14 +5,15 @@ package com.device.fot.virtual.model;
  * @author Uellington Damasceno
  */
 public class FlightMessageInfo {
+
     private final String sensorId;
     private final Long timestamp;
     private final String message;
 
-    public FlightMessageInfo(String sensorId, String message){
+    public FlightMessageInfo(String sensorId, String message) {
         this(sensorId, System.nanoTime(), message);
     }
-    
+
     public FlightMessageInfo(String sensorId, Long timestamp, String message) {
         this.sensorId = sensorId;
         this.timestamp = timestamp;
@@ -34,4 +35,10 @@ public class FlightMessageInfo {
     public long getElapsedTimeSinceSent() {
         return System.nanoTime() - this.timestamp;
     }
+
+    @Override
+    public String toString() {
+        return "FlightMessageInfo{" + "message=" + message + '}';
+    }
+
 }

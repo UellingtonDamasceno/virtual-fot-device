@@ -33,15 +33,11 @@ public class FoTDevice extends Device {
     }
 
     public void restartFlow() {
-        this.applayActionAtSensor(FoTSensor::shouldRestartFlow, FoTSensor::restartFlow);
-    }
-
-    public void pauseFlow() {
-        this.applayActionAtSensor(FoTSensor::isFlow, FoTSensor::pauseFlow);
+        this.applayActionAtSensor(sensor -> true, FoTSensor::restartFlow);
     }
 
     public void stopFlow() {
-        this.applayActionAtSensor(FoTSensor::isRunnging, FoTSensor::stopFlow);
+        this.applayActionAtSensor(FoTSensor::isRunning, FoTSensor::stopFlow);
     }
 
     public boolean isUpdating() {
@@ -80,7 +76,7 @@ public class FoTDevice extends Device {
 
     public void updateBrokerSettings(BrokerSettings newBrokerSettings) throws MqttException {
         BrokerSettings oldBrokerSettings = this.brokerSettings;
-        this.pauseFlow();
+        this.stopFlow();
         try {
             this.connect(newBrokerSettings);
         } catch (MqttException ex) {
