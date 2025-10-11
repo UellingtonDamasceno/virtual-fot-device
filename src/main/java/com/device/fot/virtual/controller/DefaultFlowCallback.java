@@ -34,15 +34,13 @@ public class DefaultFlowCallback implements MqttCallback {
 
     private static final Logger logger = Logger.getLogger(DefaultFlowCallback.class.getName());
 
-    public DefaultFlowCallback(FoTDevice device, String brokerIp, ExperimentConfig config) {
+    public DefaultFlowCallback(FoTDevice device, String brokerIp, ExperimentConfig config, LatencyApiController apiController) {
         this.device = device;
         this.brokerIp = brokerIp;
         this.expConfig = config;
         
         this.brokerUpdateController = new BrokerUpdateCallback(device, config);
-        LatencyLoggerApiClient apiClient = new LatencyLoggerApiClient(config.getApiUrl());
-
-        this.latencyApi = new LatencyApiController(apiClient, device.getId(), brokerIp, config);
+        this.latencyApi = apiController;
     }
 
     @Override

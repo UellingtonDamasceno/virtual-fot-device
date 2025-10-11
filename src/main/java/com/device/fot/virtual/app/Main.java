@@ -72,9 +72,9 @@ public class Main {
         List<Sensor> sensors = SensorGenerator.generateSensors(deviceId, jitterWindow, sensorNumber);
 
         ExperimentConfig expConfig = ExperimentConfig.load();
-        setupLatencyLoggerApiController(expConfig, deviceId, brokerIp);
+        LatencyApiController controller = setupLatencyLoggerApiController(expConfig, deviceId, brokerIp);
 
-        FoTDevice device = new FoTDevice(deviceId+new Random().nextInt(1000), sensors, expConfig);
+        FoTDevice device = new FoTDevice(deviceId+new Random().nextInt(1000), sensors, expConfig, controller);
         BrokerUpdateCallback callback = new BrokerUpdateCallback(device, expConfig);
         callback.startUpdateBroker(brokerSettings, Long.parseLong(timeout), true);
     }

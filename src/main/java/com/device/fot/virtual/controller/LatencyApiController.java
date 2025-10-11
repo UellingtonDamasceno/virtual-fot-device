@@ -36,10 +36,7 @@ public class LatencyApiController implements Runnable {
 
     public void start() {
         if (this.thread == null || !running) {
-            this.thread = new Thread(this);
-            this.thread.setDaemon(true);
-            this.thread.setName("LATENCY_LOGGER_API_WRITER");
-            this.thread.start();
+            this.thread = Thread.ofVirtual().name("LATENCY_LOGGER_API_WRITER").start(this);
         }
     }
 

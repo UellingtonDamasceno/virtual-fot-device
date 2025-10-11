@@ -1,6 +1,7 @@
 package com.device.fot.virtual.model;
 
 import com.device.fot.virtual.controller.DefaultFlowCallback;
+import com.device.fot.virtual.controller.LatencyApiController;
 import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import extended.tatu.wrapper.model.Device;
 import extended.tatu.wrapper.model.Sensor;
@@ -25,11 +26,13 @@ public class FoTDevice extends Device {
     private boolean updating;
     private MqttCallback callback;
     private ExperimentConfig config;
+    private LatencyApiController controller;
 
-    public FoTDevice(String name, List<Sensor> sensors, ExperimentConfig config) {
+    public FoTDevice(String name, List<Sensor> sensors, ExperimentConfig config, LatencyApiController controller) {
         super(name, new Random().nextDouble(), new Random().nextDouble(), sensors);
         this.updating = false;
         this.config = config;
+        this.controller = controller;
     }
 
     public void restartFlow() {
@@ -51,7 +54,9 @@ public class FoTDevice extends Device {
     public void connect(BrokerSettings brokerSettings) throws MqttException {
         String brokerIp = brokerSettings.getUrl();
 
-        this.callback = (callback == null) ? callback = new DefaultFlowCallback(this, brokerIp, config) : callback;
+        this.callback = (callback == null) 
+                ? callback = new DefaultFlowCallback(this, brokerIp, config, controller) 
+                : callback;
 
         this.client = brokerSettings.getClient();
 
