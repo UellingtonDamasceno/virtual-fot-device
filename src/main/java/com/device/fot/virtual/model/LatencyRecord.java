@@ -18,7 +18,10 @@ public class LatencyRecord {
     private String sensorId;
     private String brokerIp;
     private String message;
-
+    
+    public LatencyRecord(){
+    }
+    
     public LatencyRecord(String deviceID,
             String sensorId,
             String brokerIp,
@@ -129,4 +132,16 @@ public class LatencyRecord {
 
         return formattedLatency;
     }
+
+    public void reset() {
+        this.deviceID = null;
+        this.sensorId = null;
+        this.brokerIp = null;
+        this.experiment = null;
+        this.type = 0; 
+        this.level = 0; 
+        this.latency = null;
+        this.message = null;
+    }
+
 }

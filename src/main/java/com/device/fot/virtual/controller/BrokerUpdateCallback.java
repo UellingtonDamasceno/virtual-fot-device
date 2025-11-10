@@ -78,7 +78,7 @@ public class BrokerUpdateCallback implements MqttCallback, Runnable {
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         String messagePayload = new String(mqttMessage.getPayload());
-        logger.log(Level.INFO, "Message arrived on topic ''{0}'': {1}", new Object[]{topic, messagePayload}); // FINER for raw message
+        logger.log(Level.INFO, "Message arrived on topic ''{0}'': {1}", new Object[]{topic, messagePayload});
 
         TATUMessage tatuMessage = new TATUMessage(messagePayload);
         if (!tatuMessage.isResponse() || !tatuMessage.getMethod().equals(ExtendedTATUMethods.CONNACK)) {

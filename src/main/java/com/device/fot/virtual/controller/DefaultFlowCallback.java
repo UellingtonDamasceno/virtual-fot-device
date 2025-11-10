@@ -1,6 +1,5 @@
 package com.device.fot.virtual.controller;
 
-import com.device.fot.virtual.api.LatencyLoggerApiClient;
 import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -38,7 +37,7 @@ public class DefaultFlowCallback implements MqttCallback {
         this.device = device;
         this.brokerIp = brokerIp;
         this.expConfig = config;
-        
+
         this.brokerUpdateController = new BrokerUpdateCallback(device, config);
         this.latencyApi = apiController;
     }
@@ -120,16 +119,22 @@ public class DefaultFlowCallback implements MqttCallback {
     public void deliveryComplete(IMqttDeliveryToken imdt) {
         Object context = imdt.getUserContext();
         if (!(context instanceof FlightMessageInfo)) {
-            logger.info("Viajou na batatinha");
+            logger.info("Contexto inesperado, ignorando.");
             return;
         }
-        FlightMessageInfo messageInfo = (FlightMessageInfo) context;
-        String messageContent = messageInfo.getMessage();
-        String sensorId = messageInfo.getSensorId();
-        Long rtt = messageInfo.getElapsedTimeSinceSent();
 
-        LatencyRecord record = LatencyRecord.of(this.device.getId(), sensorId, brokerIp, this.expConfig, rtt, messageContent);
-        logger.log(Level.INFO, "{0} - {1}", new Object[]{record, sensorId});
+        FlightMessageInfo messageInfo = (FlightMessageInfo) context;
+        LatencyRecord record = LatencyRecordPool.borrow();
+
+        record.setDeviceID(this.device.getId());
+        record.setSensorId(messageInfo.getSensorId());
+        record.setBrokerIp(this.brokerIp);
+        record.setExperiment(this.expConfig.getExpNum());
+        record.setType(this.expConfig.getExpType());
+        record.setLevel(this.expConfig.getExpLevel());
+        record.setLatency(messageInfo.getElapsedTimeSinceSent());
+        record.setMessage(messageInfo.getMessage());
+
         this.latencyApi.putLatencyRecord(record);
     }
 

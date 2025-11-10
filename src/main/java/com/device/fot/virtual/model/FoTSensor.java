@@ -1,13 +1,14 @@
 package com.device.fot.virtual.model;
 
 import com.device.fot.virtual.enums.SensorType;
-import java.util.LinkedList;
 import java.util.Random;
 
 import org.eclipse.paho.client.mqttv3.MqttException;
 
 import extended.tatu.wrapper.model.Sensor;
 import extended.tatu.wrapper.util.TATUWrapper;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,6 +32,7 @@ public class FoTSensor extends Sensor implements Runnable {
     private int lastValue;
 
     private volatile boolean running, flow;
+    private final ArrayList<Integer> valuesBuffer;
 
     private FoTSensor(String deviceId, String sensorId, SensorType sensorType, Integer initialJitterDelay) {
         this(deviceId, sensorId, sensorType, 1000, 100, initialJitterDelay);
@@ -43,7 +45,7 @@ public class FoTSensor extends Sensor implements Runnable {
             int collectionTime,
             Integer initialJitterDelay) {
 
-        super(sensorId, type.getName(),
+        super(sensorId, type.getShortName(),
                 collectionTime,
                 publishingTime,
                 type.getMinValue(),
@@ -58,6 +60,8 @@ public class FoTSensor extends Sensor implements Runnable {
         this.lastValue = (minValue <= 0 && maxValue <= 0) ? 0 : (maxValue - minValue) + minValue;
         this.flowThreadName = this.buildFlowThreadName(deviceId, id);
         this.initialJitterDelay = initialJitterDelay;
+        int capacity = (publishingTime > 0 && collectionTime > 0) ? (publishingTime / collectionTime) + 2 : 16;
+        this.valuesBuffer = new ArrayList<>(capacity);
     }
 
     public String deviceId() {
@@ -80,6 +84,7 @@ public class FoTSensor extends Sensor implements Runnable {
     public void setPublishingTime(int publishingTime) {
         if (publishingTime >= 1) {
             this.publishingTime = publishingTime;
+            this.ensureBufferCapacity();
             return;
         }
         this.stopFlow();
@@ -89,6 +94,7 @@ public class FoTSensor extends Sensor implements Runnable {
     public void setCollectionTime(int collectionTime) {
         if (collectionTime >= 1) {
             this.collectionTime = collectionTime;
+            this.ensureBufferCapacity();
             return;
         }
         this.stopFlow();
@@ -112,6 +118,7 @@ public class FoTSensor extends Sensor implements Runnable {
 
         if (thread == null || !thread.isAlive()) {
             logger.log(Level.INFO, "Starting flow for sensor {0}...", getId());
+            this.ensureBufferCapacity();
             this.thread = Thread.ofVirtual().name(flowThreadName).start(this);
         } else {
             logger.log(Level.INFO, "Flow for sensor {0} is already running. Parameters updated.", getId());
@@ -131,15 +138,15 @@ public class FoTSensor extends Sensor implements Runnable {
         return this.running;
     }
 
-    private Data<Integer> getDataFlow() throws InterruptedException {
-        var values = new LinkedList<Integer>();
+    private List<Integer> getDataFlow() throws InterruptedException {
+        this.valuesBuffer.clear();
         int tempPublish = this.publishingTime;
         while (tempPublish >= 0) {
-            values.add(this.getCurrentValue());
+            this.valuesBuffer.add(this.getCurrentValue());
             tempPublish -= this.collectionTime;
             Thread.sleep(this.collectionTime);
         }
-        return new Data<>(this.deviceId, this.id, values);
+        return this.valuesBuffer;
     }
 
     public Integer getCurrentValue() {
@@ -148,17 +155,23 @@ public class FoTSensor extends Sensor implements Runnable {
         return lastValue;
     }
 
+    private void ensureBufferCapacity() {
+        if (this.collectionTime > 0) {
+            int requiredCapacity = (this.publishingTime / this.collectionTime) + 2;
+            this.valuesBuffer.ensureCapacity(requiredCapacity);
+        }
+    }
+
     @Override
     public void run() {
         this.running = true;
-
         try {
             Thread.sleep(random.nextInt(this.initialJitterDelay));
             while (this.flow) {
                 try {
-                    Data<Integer> data = this.getDataFlow();
+                    List<Integer> data = this.getDataFlow();
                     if (publisher != null && this.flow) {
-                        String msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime, data.getValues().toArray());
+                        String msg = TATUWrapper.buildFlowMessageResponse(deviceId, id, publishingTime, collectionTime, data.toArray());
                         publisher.publishAndTrack(this.publishTopic, this.id, msg);
                     }
                 } catch (InterruptedException e) {
@@ -197,7 +210,7 @@ public class FoTSensor extends Sensor implements Runnable {
 
     public static FoTSensor randomSensor(String deviceId, int sensorIdSufix, Integer initialDelay) {
         SensorType type = SensorType.getRandomSensor();
-        String sensorId = type.getName() + "_" + sensorIdSufix;
+        String sensorId = type.getShortName() + sensorIdSufix;
         return new FoTSensor(deviceId, sensorId, type, initialDelay);
     }
 }

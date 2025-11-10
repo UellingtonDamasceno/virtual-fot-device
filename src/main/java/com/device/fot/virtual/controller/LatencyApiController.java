@@ -5,7 +5,9 @@ import com.device.fot.virtual.controller.configs.ExperimentConfig;
 import com.device.fot.virtual.model.LatencyRecord;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -43,31 +45,54 @@ public class LatencyApiController implements Runnable {
     public void stop() {
         running = false;
     }
-    
-    public void putLatencyRecord(LatencyRecord record){
+
+    public void putLatencyRecord(LatencyRecord record) {
         this.buffer.add(record);
     }
-    
+
+    private void clearBuffer(List<LatencyRecord> latencyLines) {
+        for (LatencyRecord record : latencyLines) {
+            LatencyRecordPool.release(record);
+        }
+        latencyLines.clear();
+    }
+
     @Override
     public void run() {
         running = true;
         var latencyLines = new ArrayList<LatencyRecord>(bufferSize);
+        long lastSendTime = System.currentTimeMillis();
+        final long SEND_TIMEOUT_MS = 10000; 
+
         while (running) {
             try {
-                if (buffer.isEmpty()) {
-                    continue;
+                LatencyRecord head = buffer.poll(SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                if (head != null) {
+                    latencyLines.add(head);
+                    buffer.drainTo(latencyLines, bufferSize - 1);
                 }
-                latencyLines.add(buffer.take());
 
-                if (latencyLines.size() >= bufferSize) {
+                long currentTime = System.currentTimeMillis();
+                boolean bufferFull = latencyLines.size() >= bufferSize;
+                boolean timeoutReached = (currentTime - lastSendTime) >= SEND_TIMEOUT_MS;
+
+                if (!latencyLines.isEmpty() && (bufferFull || timeoutReached)) {
+
                     apiClient.postAllLatencies(latencyLines);
-                    latencyLines.clear();
+
+                    this.clearBuffer(latencyLines);
+                    lastSendTime = currentTime;
                 }
-            } catch (InterruptedException | IOException ex) {
-                logger.log(Level.SEVERE, null, ex);
+            } catch (InterruptedException ex) {
+                logger.log(Level.INFO, "Thread do LatencyApiController interrompida.");
+                Thread.currentThread().interrupt(); 
+                this.running = false;
+            } catch (IOException ex) {
+                logger.log(Level.SEVERE, "Erro de IO ao enviar latências", ex);
                 this.running = false;
             }
         }
+        this.clearBuffer(latencyLines);
     }
 
 }
